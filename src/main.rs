@@ -21,25 +21,24 @@ struct Screen {
 fn main() {
     const SCREEN_SIZE: Screen = Screen { x: 800, y: 600 };
 
-    let sdl = sdl2::init().unwrap();
-    let video_subsystem = sdl.video().unwrap();
+    let sdl_context = sdl2::init().unwrap();
+    let sdl_video: sdl2::VideoSubsystem = sdl_context.video().unwrap();
 
-    let gl_attr = video_subsystem.gl_attr();
+    let gl_attr = sdl_video.gl_attr();
     gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
     gl_attr.set_context_version(4, 1);
 
-    let window = video_subsystem
+    let window = sdl_video
         .window("This is how we began", SCREEN_SIZE.x, SCREEN_SIZE.y)
         .opengl()
         .resizable()
         .build()
         .unwrap();
 
-    sdl.mouse().warp_mouse_in_window(&window, 300, 400);
+    sdl_context.mouse().set_relative_mouse_mode(true);
 
     let _gl_context = window.gl_create_context().unwrap();
-    let _gl =
-        gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const std::os::raw::c_void);
+    let _gl = gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
 
     use std::ffi::CString;
     let vert_shader =
@@ -107,6 +106,7 @@ fn main() {
             std::ptr::null(),                                     // offset of the first component
         );
 
+        // Unbinding
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         gl::BindVertexArray(0);
 
@@ -119,8 +119,8 @@ fn main() {
         gl::ClearColor(0.5, 0.3, 0.3, 1.0);
     }
 
-    let mut event_pump = sdl.event_pump().unwrap();
-    let timer = sdl.timer().unwrap();
+    let mut event_pump = sdl_context.event_pump().unwrap();
+    let timer = sdl_context.timer().unwrap();
 
     let mut dt: f32;
     let mut last_tick_time: u64;
@@ -198,5 +198,11 @@ fn main() {
         }
 
         window.gl_swap_window();
+    }
+
+    unsafe {
+        gl::DeleteVertexArrays(1, &vao);
+        gl::DeleteBuffers(1, &vbo);
+        gl::DeleteBuffers(1, &ibo);
     }
 }
