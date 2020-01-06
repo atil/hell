@@ -4,6 +4,8 @@ extern crate sdl2;
 extern crate tobj;
 
 use cgmath::*;
+use gl::types::*;
+use image::GenericImageView;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::path::Path;
@@ -51,19 +53,42 @@ fn main() {
 
     let shader_program = shader::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
-    let cube_obj = tobj::load_obj(&Path::new("cube.obj"));
-    assert!(cube_obj.is_ok());
-    let (models, _) = cube_obj.unwrap();
+    let cube_obj = match tobj::load_obj(&Path::new("test.obj")) {
+        Ok(cube_obj) => cube_obj,
+        Err(e) => panic!("Error during loading models: {}", e),
+    };
 
-    let mut camera = Camera::new();
+    let (models, materials) = cube_obj;
 
-    let vertices = models[0].mesh.positions.clone(); // This is bad
+    let vertices = models[0].mesh.positions.clone();
+    let texcoords = models[0].mesh.texcoords.clone();
+
+    assert_eq!(vertices.len() / 3, texcoords.len() / 2);
+
+    let iter_zip = vertices.chunks(3).zip(texcoords.chunks(2));
+    let vertex_data = iter_zip
+        .map(|vec_tuple| {
+            vec![
+                vec_tuple.0[0], // Position
+                vec_tuple.0[1], // Position
+                vec_tuple.0[2], // Position
+                vec_tuple.1[0], // Texcoord
+                vec_tuple.1[1], // Texcoord
+            ]
+        })
+        .flatten()
+        .collect::<Vec<f32>>();
+
     let indices = models[0].mesh.indices.clone();
+    let material = materials[0].clone();
 
-    let mut vbo: gl::types::GLuint = 0;
-    let mut ibo: gl::types::GLuint = 0;
-    let mut vao: gl::types::GLuint = 0;
+    let mut vbo: GLuint = 0;
+    let mut ibo: GLuint = 0;
+    let mut vao: GLuint = 0;
+    let mut texture = 0;
     unsafe {
+        gl::Enable(gl::DEPTH_TEST);
+
         let projection: Matrix4<f32> = cgmath::perspective(
             Deg(45.0),
             SCREEN_SIZE.x as f32 / SCREEN_SIZE.y as f32,
@@ -76,47 +101,77 @@ fn main() {
         gl::GenBuffers(1, &mut ibo);
         gl::GenVertexArrays(1, &mut vao);
 
+        let sizeof_float = std::mem::size_of::<f32>();
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(
-            gl::ARRAY_BUFFER,                                                       // target
-            (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, // size of data in bytes
-            vertices.as_ptr() as *const gl::types::GLvoid, // pointer to data
-            gl::STATIC_DRAW,                               // usage
+            gl::ARRAY_BUFFER,
+            (vertex_data.len() * sizeof_float) as GLsizeiptr,
+            vertex_data.as_ptr() as *const GLvoid, // need to send all vertex data here
+            gl::STATIC_DRAW,
         );
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
 
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
         gl::BufferData(
-            gl::ELEMENT_ARRAY_BUFFER, // target
-            (indices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, // size of data in bytes
-            indices.as_ptr() as *const gl::types::GLvoid, // pointer to data
-            gl::STATIC_DRAW,                              // usage
+            gl::ELEMENT_ARRAY_BUFFER,
+            (indices.len() * sizeof_float) as GLsizeiptr,
+            indices.as_ptr() as *const GLvoid,
+            gl::STATIC_DRAW,
         );
 
         gl::BindVertexArray(vao);
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
 
-        gl::EnableVertexAttribArray(0); // this is "layout (location = 0)" in vertex shader
+        gl::EnableVertexAttribArray(0);
         gl::VertexAttribPointer(
-            0,         // index of the generic vertex attribute ("layout (location = 0)")
-            3,         // the number of components per generic vertex attribute
-            gl::FLOAT, // data type
-            gl::FALSE, // normalized (int-to-float conversion)
-            (3 * std::mem::size_of::<f32>()) as gl::types::GLint, // stride (byte offset between consecutive attributes)
-            std::ptr::null(),                                     // offset of the first component
+            0,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            (5 * sizeof_float) as GLsizei,
+            std::ptr::null(),
         );
+
+        gl::EnableVertexAttribArray(1);
+        gl::VertexAttribPointer(
+            1,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            (5 * sizeof_float) as GLsizei,
+            (3 * sizeof_float) as *const GLvoid,
+        );
+        gl::GenTextures(1, &mut texture);
+        gl::BindTexture(gl::TEXTURE_2D, texture);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+        let img = image::open(&Path::new("test_texture.png")).unwrap();
+        let img = img.flipv();
+        let img_data = img.raw_pixels();
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGB as i32,
+            img.width() as i32,
+            img.height() as i32,
+            0,
+            gl::RGBA,
+            gl::UNSIGNED_BYTE,
+            &img_data[0] as *const u8 as *const GLvoid,
+        );
+        gl::GenerateMipmap(gl::TEXTURE_2D);
 
         // Unbinding
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         gl::BindVertexArray(0);
 
-        gl::Viewport(
-            0,
-            0,
-            SCREEN_SIZE.x as gl::types::GLint,
-            SCREEN_SIZE.y as gl::types::GLint,
-        );
+        gl::Viewport(0, 0, SCREEN_SIZE.x as GLint, SCREEN_SIZE.y as GLint);
         gl::ClearColor(0.5, 0.3, 0.3, 1.0);
+
+        shader_program.set_used();
+        shader_program.set_vector3("diffuse", material.diffuse);
     }
 
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -125,6 +180,7 @@ fn main() {
     let mut dt: f32;
     let mut last_tick_time: u64;
     let mut now_tick_time = timer.performance_counter();
+    let mut camera = Camera::new();
 
     'main: loop {
         let mut mouse_x = 0.0;
@@ -181,13 +237,15 @@ fn main() {
         }
 
         unsafe {
+            gl::BindTexture(gl::TEXTURE_2D, texture);
+
             shader_program.set_used();
             shader_program.set_matrix("view", camera.get_view_matrix());
 
             let model: Matrix4<f32> = Matrix4::from_translation(Vector3::new(0.0, -1.0, -10.0));
             shader_program.set_matrix("model", model);
 
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::BindVertexArray(vao);
             gl::DrawElements(
                 gl::TRIANGLES,

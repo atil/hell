@@ -1,5 +1,5 @@
+use cgmath::{Matrix, Matrix4};
 use gl;
-use cgmath::{Matrix4, Matrix};
 use std;
 use std::ffi::{CStr, CString};
 
@@ -59,15 +59,17 @@ impl Program {
         self.id
     }
 
-    pub fn set_used(&self) {
-        unsafe {
-            gl::UseProgram(self.id);
-        }
+    pub unsafe fn set_used(&self) {
+        gl::UseProgram(self.id);
     }
 
     pub unsafe fn set_matrix(&self, name: &str, matrix: Matrix4<f32>) {
         let location = gl::GetUniformLocation(self.id, CString::new(name).unwrap().as_ptr());
         gl::ProgramUniformMatrix4fv(self.id, location, 1, gl::FALSE, matrix.as_ptr());
+    }
+    pub unsafe fn set_vector3(&self, name: &str, slice: [f32; 3]) {
+        let location = gl::GetUniformLocation(self.id, CString::new(name).unwrap().as_ptr());
+        gl::Uniform4f(location, slice[0], slice[1], slice[2], 1.0);
     }
 }
 
