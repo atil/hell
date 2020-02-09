@@ -1,12 +1,16 @@
 #version 330 core
 
+uniform vec4 diffuse;
+uniform sampler2D texture0;
+
 in VS_OUTPUT {
-    vec3 Color;
+    vec2 TexCoord;
 } IN;
 
 out vec4 Color;
 
 void main()
 {
-    Color = vec4(0.2, 0.5, 0.7, 1.0f);
+    // Color = diffuse;
+    Color = texture(texture0, IN.TexCoord);
 }

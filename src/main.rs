@@ -62,23 +62,29 @@ fn main() {
 
     let vertices = models[0].mesh.positions.clone();
     let texcoords = models[0].mesh.texcoords.clone();
+    let normals = models[0].mesh.normals.clone();
 
     assert_eq!(vertices.len() / 3, texcoords.len() / 2);
 
-    let iter_zip = vertices.chunks(3).zip(texcoords.chunks(2));
+    let iter_zip = vertices
+        .chunks(3)
+        .zip(texcoords.chunks(2))
+        .zip(normals.chunks(3));
     let vertex_data = iter_zip
         .map(|vec_tuple| {
             vec![
-                vec_tuple.0[0], // Position
-                vec_tuple.0[1], // Position
-                vec_tuple.0[2], // Position
-                vec_tuple.1[0], // Texcoord
-                vec_tuple.1[1], // Texcoord
+                (vec_tuple.0).0[0], // Position
+                (vec_tuple.0).0[1], // Position
+                (vec_tuple.0).0[2], // Position
+                (vec_tuple.0).1[0], // Texcoord
+                (vec_tuple.0).1[1], // Texcoord
+                (vec_tuple.1)[0],   // Normal
+                (vec_tuple.1)[1],   // Normal
+                (vec_tuple.1)[2],   // Normal
             ]
         })
         .flatten()
         .collect::<Vec<f32>>();
-
     let indices = models[0].mesh.indices.clone();
     let material = materials[0].clone();
 
@@ -106,7 +112,7 @@ fn main() {
         gl::BufferData(
             gl::ARRAY_BUFFER,
             (vertex_data.len() * sizeof_float) as GLsizeiptr,
-            vertex_data.as_ptr() as *const GLvoid, // need to send all vertex data here
+            vertex_data.as_ptr() as *const GLvoid,
             gl::STATIC_DRAW,
         );
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
@@ -122,32 +128,46 @@ fn main() {
         gl::BindVertexArray(vao);
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
 
+        // Position
         gl::EnableVertexAttribArray(0);
         gl::VertexAttribPointer(
             0,
             3,
             gl::FLOAT,
             gl::FALSE,
-            (5 * sizeof_float) as GLsizei,
+            (8 * sizeof_float) as GLsizei,
             std::ptr::null(),
         );
 
+        // Texcoord
         gl::EnableVertexAttribArray(1);
         gl::VertexAttribPointer(
             1,
             2,
             gl::FLOAT,
             gl::FALSE,
-            (5 * sizeof_float) as GLsizei,
+            (8 * sizeof_float) as GLsizei,
             (3 * sizeof_float) as *const GLvoid,
         );
+
+        // Normals
+        gl::EnableVertexAttribArray(2);
+        gl::VertexAttribPointer(
+            2,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            (8 * sizeof_float) as GLsizei,
+            (5 * sizeof_float) as *const GLvoid,
+        );
+
         gl::GenTextures(1, &mut texture);
         gl::BindTexture(gl::TEXTURE_2D, texture);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-        let img = image::open(&Path::new("test_texture.png")).unwrap();
+        let img = image::open(&Path::new(material.diffuse_texture.as_str())).unwrap();
         let img = img.flipv();
         let img_data = img.raw_pixels();
         gl::TexImage2D(
@@ -163,15 +183,14 @@ fn main() {
         );
         gl::GenerateMipmap(gl::TEXTURE_2D);
 
+        shader_program.set_i32("texture0", texture as i32);
+
         // Unbinding
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         gl::BindVertexArray(0);
 
         gl::Viewport(0, 0, SCREEN_SIZE.x as GLint, SCREEN_SIZE.y as GLint);
         gl::ClearColor(0.5, 0.3, 0.3, 1.0);
-
-        shader_program.set_used();
-        shader_program.set_vector3("diffuse", material.diffuse);
     }
 
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -237,15 +256,20 @@ fn main() {
         }
 
         unsafe {
-            gl::BindTexture(gl::TEXTURE_2D, texture);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             shader_program.set_used();
             shader_program.set_matrix("view", camera.get_view_matrix());
 
-            let model: Matrix4<f32> = Matrix4::from_translation(Vector3::new(0.0, -1.0, -10.0));
-            shader_program.set_matrix("model", model);
+            let model1: Matrix4<f32> = Matrix4::from_translation(Vector3::new(0.0, -1.0, -10.0));
+            shader_program.set_matrix("model", model1);
 
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+            let mut transform = Matrix4::<f32>::identity();
+            // moving an object
+            transform = transform * Matrix4::from_translation(Vector3::new(0.0, -1.0, -10.0));
+            // rotating
+            transform = transform * Matrix4::from_axis_angle(Vector3::unit_y(), Deg(30.0));
+
             gl::BindVertexArray(vao);
             gl::DrawElements(
                 gl::TRIANGLES,
@@ -262,5 +286,6 @@ fn main() {
         gl::DeleteVertexArrays(1, &vao);
         gl::DeleteBuffers(1, &vbo);
         gl::DeleteBuffers(1, &ibo);
+        gl::DeleteTextures(1, &texture);
     }
 }
