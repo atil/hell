@@ -1,18 +1,19 @@
 extern crate cgmath;
 extern crate gl;
 extern crate sdl2;
-extern crate tobj;
 
 use cgmath::*;
 use gl::types::*;
-use image::GenericImageView;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::path::Path;
 
 pub mod camera;
 use camera::Camera;
-pub mod render;
+pub mod material;
+use material::Material;
+pub mod mesh;
+use mesh::Mesh;
 pub mod shader;
 
 struct Screen {
@@ -20,9 +21,9 @@ struct Screen {
     y: u32,
 }
 
-fn main() {
-    const SCREEN_SIZE: Screen = Screen { x: 800, y: 600 };
+const SCREEN_SIZE: Screen = Screen { x: 800, y: 600 };
 
+fn main() {
     let sdl_context = sdl2::init().unwrap();
     let sdl_video: sdl2::VideoSubsystem = sdl_context.video().unwrap();
 
@@ -42,153 +43,28 @@ fn main() {
     let _gl_context = window.gl_create_context().unwrap();
     let _gl = gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
 
-    use std::ffi::CString;
-    let vert_shader =
-        shader::Shader::from_vert_source(&CString::new(include_str!("triangle.vert")).unwrap())
-            .unwrap();
-
-    let frag_shader =
-        shader::Shader::from_frag_source(&CString::new(include_str!("triangle.frag")).unwrap())
-            .unwrap();
-
-    let shader_program = shader::Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
-
-    let cube_obj = match tobj::load_obj(&Path::new("test.obj")) {
+    let (tobj_models, tobj_mats) = match tobj::load_obj(&Path::new("test.obj")) {
         Ok(cube_obj) => cube_obj,
         Err(e) => panic!("Error during loading models: {}", e),
     };
 
-    let (models, materials) = cube_obj;
+    let projection: Matrix4<f32> = cgmath::perspective(
+        cgmath::Deg(45.0),
+        SCREEN_SIZE.x as f32 / SCREEN_SIZE.y as f32,
+        0.1,
+        100.0,
+    );
 
-    let vertices = models[0].mesh.positions.clone();
-    let texcoords = models[0].mesh.texcoords.clone();
-    let normals = models[0].mesh.normals.clone();
+    let mesh = Mesh::new(&tobj_models[0].mesh);
+    let material = Material::new(
+        &mesh.vertex_data,
+        &mesh.index_data,
+        &tobj_mats[0],
+        projection,
+    );
 
-    assert_eq!(vertices.len() / 3, texcoords.len() / 2);
-
-    let iter_zip = vertices
-        .chunks(3)
-        .zip(texcoords.chunks(2))
-        .zip(normals.chunks(3));
-    let vertex_data = iter_zip
-        .map(|vec_tuple| {
-            vec![
-                (vec_tuple.0).0[0], // Position
-                (vec_tuple.0).0[1], // Position
-                (vec_tuple.0).0[2], // Position
-                (vec_tuple.0).1[0], // Texcoord
-                (vec_tuple.0).1[1], // Texcoord
-                (vec_tuple.1)[0],   // Normal
-                (vec_tuple.1)[1],   // Normal
-                (vec_tuple.1)[2],   // Normal
-            ]
-        })
-        .flatten()
-        .collect::<Vec<f32>>();
-    let indices = models[0].mesh.indices.clone();
-    let material = materials[0].clone();
-
-    let mut vbo: GLuint = 0;
-    let mut ibo: GLuint = 0;
-    let mut vao: GLuint = 0;
-    let mut texture = 0;
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
-
-        let projection: Matrix4<f32> = cgmath::perspective(
-            Deg(45.0),
-            SCREEN_SIZE.x as f32 / SCREEN_SIZE.y as f32,
-            0.1,
-            100.0,
-        );
-        shader_program.set_matrix("projection", projection);
-
-        gl::GenBuffers(1, &mut vbo);
-        gl::GenBuffers(1, &mut ibo);
-        gl::GenVertexArrays(1, &mut vao);
-
-        let sizeof_float = std::mem::size_of::<f32>();
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,
-            (vertex_data.len() * sizeof_float) as GLsizeiptr,
-            vertex_data.as_ptr() as *const GLvoid,
-            gl::STATIC_DRAW,
-        );
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
-        gl::BufferData(
-            gl::ELEMENT_ARRAY_BUFFER,
-            (indices.len() * sizeof_float) as GLsizeiptr,
-            indices.as_ptr() as *const GLvoid,
-            gl::STATIC_DRAW,
-        );
-
-        gl::BindVertexArray(vao);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-
-        // Position
-        gl::EnableVertexAttribArray(0);
-        gl::VertexAttribPointer(
-            0,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            (8 * sizeof_float) as GLsizei,
-            std::ptr::null(),
-        );
-
-        // Texcoord
-        gl::EnableVertexAttribArray(1);
-        gl::VertexAttribPointer(
-            1,
-            2,
-            gl::FLOAT,
-            gl::FALSE,
-            (8 * sizeof_float) as GLsizei,
-            (3 * sizeof_float) as *const GLvoid,
-        );
-
-        // Normals
-        gl::EnableVertexAttribArray(2);
-        gl::VertexAttribPointer(
-            2,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            (8 * sizeof_float) as GLsizei,
-            (5 * sizeof_float) as *const GLvoid,
-        );
-
-        gl::GenTextures(1, &mut texture);
-        gl::BindTexture(gl::TEXTURE_2D, texture);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-        let img = image::open(&Path::new(material.diffuse_texture.as_str())).unwrap();
-        let img = img.flipv();
-        let img_data = img.raw_pixels();
-        gl::TexImage2D(
-            gl::TEXTURE_2D,
-            0,
-            gl::RGB as i32,
-            img.width() as i32,
-            img.height() as i32,
-            0,
-            gl::RGBA,
-            gl::UNSIGNED_BYTE,
-            &img_data[0] as *const u8 as *const GLvoid,
-        );
-        gl::GenerateMipmap(gl::TEXTURE_2D);
-
-        shader_program.set_i32("texture0", texture as i32);
-
-        // Unbinding
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-        gl::BindVertexArray(0);
-
         gl::Viewport(0, 0, SCREEN_SIZE.x as GLint, SCREEN_SIZE.y as GLint);
         gl::ClearColor(0.5, 0.3, 0.3, 1.0);
     }
@@ -240,52 +116,30 @@ fn main() {
             .filter_map(Keycode::from_scancode)
             .collect();
 
-        let speed = 0.004;
+        const SPEED: f32 = 0.004;
         if keys.contains(&Keycode::W) {
-            camera.position += cgmath::EuclideanSpace::to_vec(camera.forward) * speed * dt;
+            camera.position += cgmath::EuclideanSpace::to_vec(camera.forward) * SPEED * dt;
         } else if keys.contains(&Keycode::S) {
-            camera.position -= cgmath::EuclideanSpace::to_vec(camera.forward) * speed * dt;
+            camera.position -= cgmath::EuclideanSpace::to_vec(camera.forward) * SPEED * dt;
         } else if keys.contains(&Keycode::A) {
             let local_left =
                 cgmath::EuclideanSpace::to_vec(camera.forward).cross(Vector3::unit_y());
-            camera.position -= local_left * speed * dt;
+            camera.position -= local_left * SPEED * dt;
         } else if keys.contains(&Keycode::D) {
             let local_left =
                 cgmath::EuclideanSpace::to_vec(camera.forward).cross(Vector3::unit_y());
-            camera.position += local_left * speed * dt;
+            camera.position += local_left * SPEED * dt;
         }
 
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-            shader_program.set_used();
-            shader_program.set_matrix("view", camera.get_view_matrix());
-
-            let model1: Matrix4<f32> = Matrix4::from_translation(Vector3::new(0.0, -1.0, -10.0));
-            shader_program.set_matrix("model", model1);
-
             let mut transform = Matrix4::<f32>::identity();
-            // moving an object
             transform = transform * Matrix4::from_translation(Vector3::new(0.0, -1.0, -10.0));
-            // rotating
             transform = transform * Matrix4::from_axis_angle(Vector3::unit_y(), Deg(30.0));
-
-            gl::BindVertexArray(vao);
-            gl::DrawElements(
-                gl::TRIANGLES,
-                indices.len() as i32,
-                gl::UNSIGNED_INT,
-                indices.as_ptr() as *const std::os::raw::c_void,
-            );
+            material.draw(&mesh.index_data, transform, camera.get_view_matrix())
         }
 
         window.gl_swap_window();
-    }
-
-    unsafe {
-        gl::DeleteVertexArrays(1, &vao);
-        gl::DeleteBuffers(1, &vbo);
-        gl::DeleteBuffers(1, &ibo);
-        gl::DeleteTextures(1, &texture);
     }
 }
