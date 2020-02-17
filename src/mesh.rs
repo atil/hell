@@ -1,12 +1,9 @@
 extern crate tobj;
 
-pub struct Mesh {
-    pub vertex_data: Vec<f32>,
-    pub index_data: Vec<u32>,
-}
+pub struct Mesh;
 
 impl Mesh {
-    pub fn new(mesh: &tobj::Mesh) -> Mesh {
+    pub fn read_vertex_data(mesh: &tobj::Mesh) -> (Vec<f32>, Vec<u32>) {
         let vertices = mesh.positions.clone();
         let texcoords = mesh.texcoords.clone();
         let normals = mesh.normals.clone();
@@ -32,9 +29,6 @@ impl Mesh {
             .collect::<Vec<f32>>();
         let index_data = mesh.indices.clone();
 
-        Mesh {
-            vertex_data: vertex_data,
-            index_data: index_data,
-        }
+        (vertex_data, index_data)
     }
 }

@@ -14,14 +14,28 @@ pub mod material;
 use material::Material;
 pub mod mesh;
 use mesh::Mesh;
+pub mod object;
 pub mod shader;
+use object::Object;
 
 struct Screen {
     x: u32,
     y: u32,
 }
 
-const SCREEN_SIZE: Screen = Screen { x: 800, y: 600 };
+struct Config {
+    x_sensitivity: f32,
+    y_sensitivity: f32,
+    screen: Screen,
+    move_speed: f32,
+}
+
+const CONFIG: Config = Config {
+    x_sensitivity: 0.004,
+    y_sensitivity: 0.004,
+    screen: Screen { x: 800, y: 600 },
+    move_speed: 0.004,
+};
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -32,7 +46,7 @@ fn main() {
     gl_attr.set_context_version(4, 1);
 
     let window = sdl_video
-        .window("This is how we began", SCREEN_SIZE.x, SCREEN_SIZE.y)
+        .window("This is how we began", CONFIG.screen.x, CONFIG.screen.y)
         .opengl()
         .resizable()
         .build()
@@ -50,22 +64,21 @@ fn main() {
 
     let projection: Matrix4<f32> = cgmath::perspective(
         cgmath::Deg(45.0),
-        SCREEN_SIZE.x as f32 / SCREEN_SIZE.y as f32,
+        CONFIG.screen.x as f32 / CONFIG.screen.y as f32,
         0.1,
         100.0,
     );
 
-    let mesh = Mesh::new(&tobj_models[0].mesh);
-    let material = Material::new(
-        &mesh.vertex_data,
-        &mesh.index_data,
-        &tobj_mats[0],
-        projection,
-    );
+    let (vertex_data, index_data) = Mesh::read_vertex_data(&tobj_models[0].mesh);
+    let material = Material::new(&vertex_data, index_data, &tobj_mats[0], projection);
+
+    let mut object = Object::new(&material);
+    object.translate(Vector3::new(0.0, -1.0, -10.0));
+    object.rotate(Vector3::unit_y(), 30.0);
 
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
-        gl::Viewport(0, 0, SCREEN_SIZE.x as GLint, SCREEN_SIZE.y as GLint);
+        gl::Viewport(0, 0, CONFIG.screen.x as GLint, CONFIG.screen.y as GLint);
         gl::ClearColor(0.5, 0.3, 0.3, 1.0);
     }
 
@@ -95,14 +108,12 @@ fn main() {
             }
         }
 
-        let sensitivity_x = 0.004;
         let horz_rot =
-            Quaternion::from_axis_angle(Vector3::unit_y(), Rad(-mouse_x) * sensitivity_x);
+            Quaternion::from_axis_angle(Vector3::unit_y(), Rad(-mouse_x) * CONFIG.x_sensitivity);
         camera.forward = horz_rot.rotate_point(camera.forward);
 
-        let sensitivity_y = 0.004;
         let left = EuclideanSpace::to_vec(camera.forward).cross(Vector3::unit_y());
-        camera.forward = Quaternion::from_axis_angle(left, Rad(-mouse_y) * sensitivity_y)
+        camera.forward = Quaternion::from_axis_angle(left, Rad(-mouse_y) * CONFIG.y_sensitivity)
             .rotate_point(camera.forward);
 
         last_tick_time = now_tick_time;
@@ -116,28 +127,26 @@ fn main() {
             .filter_map(Keycode::from_scancode)
             .collect();
 
-        const SPEED: f32 = 0.004;
         if keys.contains(&Keycode::W) {
-            camera.position += cgmath::EuclideanSpace::to_vec(camera.forward) * SPEED * dt;
+            camera.position +=
+                cgmath::EuclideanSpace::to_vec(camera.forward) * CONFIG.move_speed * dt;
         } else if keys.contains(&Keycode::S) {
-            camera.position -= cgmath::EuclideanSpace::to_vec(camera.forward) * SPEED * dt;
+            camera.position -=
+                cgmath::EuclideanSpace::to_vec(camera.forward) * CONFIG.move_speed * dt;
         } else if keys.contains(&Keycode::A) {
             let local_left =
                 cgmath::EuclideanSpace::to_vec(camera.forward).cross(Vector3::unit_y());
-            camera.position -= local_left * SPEED * dt;
+            camera.position -= local_left * CONFIG.move_speed * dt;
         } else if keys.contains(&Keycode::D) {
             let local_left =
                 cgmath::EuclideanSpace::to_vec(camera.forward).cross(Vector3::unit_y());
-            camera.position += local_left * SPEED * dt;
+            camera.position += local_left * CONFIG.move_speed * dt;
         }
 
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-            let mut transform = Matrix4::<f32>::identity();
-            transform = transform * Matrix4::from_translation(Vector3::new(0.0, -1.0, -10.0));
-            transform = transform * Matrix4::from_axis_angle(Vector3::unit_y(), Deg(30.0));
-            material.draw(&mesh.index_data, transform, camera.get_view_matrix())
+            object.draw(camera.get_view_matrix());
         }
 
         window.gl_swap_window();

@@ -12,12 +12,13 @@ pub struct Material {
     vao: GLuint,
     texture: GLuint,
     program: Program,
+    index_data: Vec<u32>,
 }
 
 impl Material {
     pub fn new(
         vertex_data: &Vec<f32>,
-        index_data: &Vec<u32>,
+        index_data: Vec<u32>,
         tobj_mat: &tobj::Material,
         projection: Matrix4<f32>,
     ) -> Material {
@@ -129,10 +130,11 @@ impl Material {
             vao: vao,
             texture: texture,
             program: shader_program,
+            index_data: index_data,
         }
     }
 
-    pub fn draw(&self, index_data: &Vec<u32>, model: Matrix4<f32>, view: Matrix4<f32>) {
+    pub fn draw(&self, model: Matrix4<f32>, view: Matrix4<f32>) {
         unsafe {
             self.program.set_used();
             self.program.set_matrix("model", model);
@@ -141,9 +143,9 @@ impl Material {
             gl::BindVertexArray(self.vao);
             gl::DrawElements(
                 gl::TRIANGLES,
-                index_data.len() as i32,
+                self.index_data.len() as i32,
                 gl::UNSIGNED_INT,
-                index_data.as_ptr() as *const std::os::raw::c_void,
+                self.index_data.as_ptr() as *const std::os::raw::c_void,
             );
         }
     }
