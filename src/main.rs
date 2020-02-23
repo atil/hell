@@ -26,7 +26,7 @@ fn main() {
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut camera = camera::Camera::new();
 
-    let (tobj_models, tobj_mats) = match tobj::load_obj(&Path::new("test.obj")) {
+    let (tobj_models, tobj_mats) = match tobj::load_obj(&Path::new("assets/cube.obj")) {
         Ok(cube_obj) => cube_obj,
         Err(e) => panic!("Error during loading models: {}", e),
     };

@@ -100,7 +100,9 @@ impl Material {
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-            let img = image::open(&Path::new(tobj_mat.diffuse_texture.as_str())).unwrap();
+
+            let texture_path = format!("assets/{}", tobj_mat.diffuse_texture.as_str());
+            let img = image::open(&Path::new(&texture_path)).unwrap();
             let img = img.flipv();
             let img_data = img.raw_pixels();
             gl::TexImage2D(
