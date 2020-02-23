@@ -3,8 +3,8 @@ use cgmath::*;
 use sdl2::keyboard::*;
 
 pub struct Camera {
-    pub position: Point3<f32>,
-    pub forward: Point3<f32>,
+    position: Point3<f32>,
+    forward: Point3<f32>,
 }
 
 const MOVE_SPEED: f32 = 0.004;
@@ -32,7 +32,8 @@ impl Camera {
             self.position += cgmath::EuclideanSpace::to_vec(self.forward) * MOVE_SPEED * dt;
         } else if keys.contains(&Keycode::S) {
             self.position -= cgmath::EuclideanSpace::to_vec(self.forward) * MOVE_SPEED * dt;
-        } else if keys.contains(&Keycode::A) {
+        }
+        if keys.contains(&Keycode::A) {
             let local_left = cgmath::EuclideanSpace::to_vec(self.forward).cross(Vector3::unit_y());
             self.position -= local_left * MOVE_SPEED * dt;
         } else if keys.contains(&Keycode::D) {
