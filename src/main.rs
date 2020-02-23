@@ -18,7 +18,10 @@ mod time;
 fn main() {
     let sdl_context = sdl2::init().unwrap();
 
-    let render = render::Render::new(&sdl_context);
+    // This GLContext needs to be alive. Renaming it to "_" makes the compiler
+    // drop it immediately
+    let (window, _gl_context) = render::init(&sdl_context);
+
     let mut time = time::Time::new(&sdl_context);
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut camera = camera::Camera::new();
@@ -70,6 +73,6 @@ fn main() {
 
         camera.tick(dt, keys, (mouse_x, mouse_y));
 
-        render.render(&objects, camera.get_view_matrix());
+        render::render(&window, &objects, camera.get_view_matrix());
     }
 }
