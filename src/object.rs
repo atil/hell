@@ -1,16 +1,19 @@
 use crate::material::Material;
+use crate::mesh::Mesh;
 use cgmath::*;
 
 pub struct Object<'a> {
-    transform: Matrix4<f32>,
+    pub transform: Matrix4<f32>,
     material: &'a Material,
+    pub mesh: &'a Mesh,
 }
 
-impl Object<'_> {
-    pub fn new(material: &Material) -> Object {
+impl<'a> Object<'a> {
+    pub fn new(material: &'a Material, mesh: &'a Mesh) -> Object<'a> {
         Object {
             transform: Matrix4::<f32>::identity(),
             material: material,
+            mesh: mesh,
         }
     }
 

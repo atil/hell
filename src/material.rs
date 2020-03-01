@@ -17,7 +17,7 @@ pub struct Material {
 
 impl Material {
     pub fn new(
-        vertex_data: &Vec<f32>,
+        vertex_data: Vec<f32>,
         index_data: Vec<u32>,
         tobj_mat: &tobj::Material,
         projection: Matrix4<f32>,

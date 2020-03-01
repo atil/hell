@@ -1,6 +1,19 @@
 extern crate tobj;
+use cgmath::*;
 
-pub fn read_vertex_data(mesh: &tobj::Mesh) -> (Vec<f32>, Vec<u32>) {
+pub struct Mesh {
+    vertices: Vec<Vector3<f32>>,
+    indices: Vec<u32>,
+    pub triangles: Vec<Triangle>,
+}
+
+pub struct Triangle {
+    pub p0: Vector3<f32>,
+    pub p1: Vector3<f32>,
+    pub p2: Vector3<f32>,
+}
+
+pub fn read_vertex_array(mesh: &tobj::Mesh) -> (Vec<f32>, Vec<u32>) {
     let vertices = mesh.positions.clone();
     let texcoords = mesh.texcoords.clone();
     let normals = mesh.normals.clone();
@@ -27,4 +40,35 @@ pub fn read_vertex_data(mesh: &tobj::Mesh) -> (Vec<f32>, Vec<u32>) {
     let index_data = mesh.indices.clone();
 
     (vertex_data, index_data)
+}
+
+impl Mesh {
+    pub fn new(mesh: &tobj::Mesh) -> Mesh {
+        let indices = mesh.indices.clone();
+        let vertices = mesh
+            .positions
+            .chunks(3)
+            .map(|slice| Vector3::new(slice[0], slice[1], slice[2]))
+            .collect::<Vec<Vector3<f32>>>();
+
+        let triangles = indices.chunks(3).fold(Vec::new(), |mut vec, next_three| {
+            let i0: usize = next_three[0] as usize;
+            let i1: usize = next_three[1] as usize;
+            let i2: usize = next_three[2] as usize;
+
+            vec.push(Triangle {
+                p0: vertices[i0],
+                p1: vertices[i1],
+                p2: vertices[i2],
+            });
+
+            vec
+        });
+
+        Mesh {
+            vertices: vertices,
+            indices: indices,
+            triangles: triangles,
+        }
+    }
 }

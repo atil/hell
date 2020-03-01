@@ -18,7 +18,7 @@ impl Camera {
         }
     }
 
-    pub fn tick(&mut self, dt: f32, keys: Vec<Keycode>, mouse: (f32, f32)) {
+    pub fn tick_free_cam(&mut self, dt: f32, keys: Vec<Keycode>, mouse: (f32, f32)) {
         let (mouse_x, mouse_y) = mouse;
 
         let horz_rot = Quaternion::from_axis_angle(Vector3::unit_y(), Rad(-mouse_x) * SENSITIVITY);
@@ -40,6 +40,17 @@ impl Camera {
             let local_left = cgmath::EuclideanSpace::to_vec(self.forward).cross(Vector3::unit_y());
             self.position += local_left * MOVE_SPEED * dt;
         }
+    }
+
+    pub fn tick_fps_cam(&mut self, dt: f32, keys: Vec<Keycode>, mouse: (f32, f32)) {
+        let (mouse_x, mouse_y) = mouse;
+
+        let horz_rot = Quaternion::from_axis_angle(Vector3::unit_y(), Rad(-mouse_x) * SENSITIVITY);
+        self.forward = horz_rot.rotate_point(self.forward);
+
+        let left = EuclideanSpace::to_vec(self.forward).cross(Vector3::unit_y());
+        self.forward = Quaternion::from_axis_angle(left, Rad(-mouse_y) * SENSITIVITY)
+            .rotate_point(self.forward);
     }
 
     pub fn get_view_matrix(&self) -> Matrix4<f32> {

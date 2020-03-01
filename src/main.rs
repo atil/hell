@@ -11,6 +11,7 @@ mod camera;
 mod material;
 mod mesh;
 mod object;
+mod physics;
 mod render;
 mod shader;
 mod time;
@@ -31,15 +32,16 @@ fn main() {
         Err(e) => panic!("Error during loading models: {}", e),
     };
 
-    let (vertex_data, index_data) = mesh::read_vertex_data(&tobj_models[0].mesh);
+    let (vertex_data, index_data) = mesh::read_vertex_array(&tobj_models[0].mesh);
     let material = material::Material::new(
-        &vertex_data,
+        vertex_data,
         index_data,
         &tobj_mats[0],
         render::get_projection_matrix(),
     );
 
-    let mut object = object::Object::new(&material);
+    let mesh = mesh::Mesh::new(&tobj_models[0].mesh);
+    let mut object = object::Object::new(&material, &mesh);
     object.translate(Vector3::new(0.0, -1.0, -10.0));
     object.rotate(Vector3::unit_y(), 30.0);
 
