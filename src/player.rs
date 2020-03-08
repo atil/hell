@@ -6,7 +6,7 @@ const SENSITIVITY: f32 = 0.004;
 const GROUND_ACCELERATION: f32 = 0.005;
 const GROUND_FRICTION: f32 = 0.05;
 const AIR_ACCELERATION: f32 = 0.00001;
-const AIR_FRICTION: f32 = 0.00005;
+const AIR_DECELERATION: f32 = 0.00005;
 const MAX_SPEED_ON_ONE_DIMENSION: f32 = 3.0;
 const GRAVITY: f32 = 0.0001;
 const JUMP_FORCE: f32 = 0.03;
@@ -33,6 +33,7 @@ impl Player {
 
         let is_grounded = self.position.y <= 0.0001; // Temp
         if is_grounded {
+            // Ground move
             accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
             apply_friction(&mut self.velocity, dt);
             self.velocity.y = 0.0;
@@ -40,11 +41,16 @@ impl Player {
                 self.velocity += Vector3::unit_y() * JUMP_FORCE;
             }
         } else {
-            if Vector3::dot(wish_dir, self.velocity) > 0.0 {
-                accelerate(&mut self.velocity, wish_dir, AIR_ACCELERATION, dt);
-            } else {
-                accelerate(&mut self.velocity, wish_dir, AIR_FRICTION, dt);
-            }
+            // Air move
+            let air_coeff = {
+                if Vector3::dot(wish_dir, self.velocity) > 0.0 {
+                    AIR_ACCELERATION
+                } else {
+                    AIR_DECELERATION
+                }
+            };
+
+            accelerate(&mut self.velocity, wish_dir, air_coeff, dt);
             self.velocity -= Vector3::unit_y() * GRAVITY * dt;
         }
 
