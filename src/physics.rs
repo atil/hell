@@ -31,5 +31,5 @@ fn resolve(
     t1: Vector3<f32>,
     t2: Vector3<f32>,
 ) -> Vector3<f32> {
-    Vectora::zero()
+    Vector3::zero()
 }

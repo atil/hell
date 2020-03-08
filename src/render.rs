@@ -15,7 +15,7 @@ pub fn init(sdl_context: &sdl2::Sdl) -> (sdl2::video::Window, sdl2::video::GLCon
     gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
     gl_attr.set_context_version(4, 1);
     let window = sdl_video
-        .window("This is how we began", SCREEN_SIZE.x, SCREEN_SIZE.y)
+        .window("Progress.", SCREEN_SIZE.x, SCREEN_SIZE.y)
         .opengl()
         .resizable()
         .build()

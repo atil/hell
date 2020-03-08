@@ -7,11 +7,14 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::path::Path;
 
+type vec3 = Vector3<f32>;
+
 mod camera;
 mod material;
 mod mesh;
 mod object;
 mod physics;
+mod player;
 mod render;
 mod shader;
 mod time;
@@ -25,7 +28,8 @@ fn main() {
 
     let mut time = time::Time::new(&sdl_context);
     let mut event_pump = sdl_context.event_pump().unwrap();
-    let mut camera = camera::Camera::new();
+    // let mut camera = camera::Camera::new();
+    let mut player = player::Player::new();
 
     let (tobj_models, tobj_mats) = match tobj::load_obj(&Path::new("assets/cube.obj")) {
         Ok(cube_obj) => cube_obj,
@@ -42,7 +46,7 @@ fn main() {
 
     let mesh = mesh::Mesh::new(&tobj_models[0].mesh);
     let mut object = object::Object::new(&material, &mesh);
-    object.translate(Vector3::new(0.0, -1.0, -10.0));
+    object.translate(Vector3::new(0.0, -5.0, -10.0));
     object.rotate(Vector3::unit_y(), 30.0);
 
     let objects = vec![object];
@@ -73,8 +77,8 @@ fn main() {
             .filter_map(Keycode::from_scancode)
             .collect();
 
-        camera.tick(dt, keys, (mouse_x, mouse_y));
+        player.tick(dt, keys, (mouse_x, mouse_y));
 
-        render::render(&window, &objects, camera.get_view_matrix());
+        render::render(&window, &objects, player.get_view_matrix());
     }
 }
