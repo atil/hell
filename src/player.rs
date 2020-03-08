@@ -1,11 +1,15 @@
+use crate::keys::Keys;
 use cgmath::*;
-use sdl2::keyboard::*;
+use sdl2::keyboard::Keycode;
 
-const MOVE_SPEED: f32 = 0.004;
 const SENSITIVITY: f32 = 0.004;
-const ACCELERATION: f32 = 0.005;
+const GROUND_ACCELERATION: f32 = 0.005;
+const GROUND_FRICTION: f32 = 0.05;
+const AIR_ACCELERATION: f32 = 0.00001;
+const AIR_FRICTION: f32 = 0.00005;
 const MAX_SPEED_ON_ONE_DIMENSION: f32 = 3.0;
-const FRICTION: f32 = 0.05;
+const GRAVITY: f32 = 0.0001;
+const JUMP_FORCE: f32 = 0.03;
 
 pub struct Player {
     velocity: Vector3<f32>,
@@ -22,73 +26,35 @@ impl Player {
         }
     }
 
-    pub fn tick(&mut self, dt: f32, keys: Vec<Keycode>, mouse: (f32, f32)) {
-        Player::set_forward(&mut self.forward, mouse);
+    pub fn tick(&mut self, dt: f32, keys: &Keys, mouse: (f32, f32)) -> Point3<f32> {
+        set_forward(&mut self.forward, mouse);
 
-        let wish_dir = Player::get_wish_dir(&keys, self.forward);
+        let wish_dir = get_wish_dir(&keys, self.forward);
 
-        let is_grounded = true;
+        let is_grounded = self.position.y <= 0.0001; // Temp
         if is_grounded {
-            Player::accelerate(&mut self.velocity, wish_dir, dt);
-            Player::apply_friction(&mut self.velocity, dt);
+            accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
+            apply_friction(&mut self.velocity, dt);
             self.velocity.y = 0.0;
+            if keys.get_key_down(Keycode::Space) {
+                self.velocity += Vector3::unit_y() * JUMP_FORCE;
+            }
         } else {
+            if Vector3::dot(wish_dir, self.velocity) > 0.0 {
+                accelerate(&mut self.velocity, wish_dir, AIR_ACCELERATION, dt);
+            } else {
+                accelerate(&mut self.velocity, wish_dir, AIR_FRICTION, dt);
+            }
+            self.velocity -= Vector3::unit_y() * GRAVITY * dt;
         }
 
         self.position += self.velocity * dt;
-    }
 
-    fn set_forward(forward: &mut Point3<f32>, mouse: (f32, f32)) {
-        let (mouse_x, mouse_y) = mouse;
-
-        let horz_rot = Quaternion::from_axis_angle(Vector3::unit_y(), Rad(-mouse_x) * SENSITIVITY);
-        *forward = horz_rot.rotate_point(*forward);
-
-        let left = EuclideanSpace::to_vec(*forward).cross(Vector3::unit_y());
-        *forward =
-            Quaternion::from_axis_angle(left, Rad(-mouse_y) * SENSITIVITY).rotate_point(*forward);
-    }
-
-    fn get_wish_dir(keys: &Vec<Keycode>, forward: Point3<f32>) -> Vector3<f32> {
-        let mut vec = Vector3::<f32>::zero();
-        if keys.contains(&Keycode::W) {
-            vec += cgmath::EuclideanSpace::to_vec(forward)
-        } else if keys.contains(&Keycode::S) {
-            vec -= cgmath::EuclideanSpace::to_vec(forward)
-        }
-        if keys.contains(&Keycode::A) {
-            vec -= cgmath::EuclideanSpace::to_vec(forward).cross(Vector3::unit_y())
-        } else if keys.contains(&Keycode::D) {
-            vec += cgmath::EuclideanSpace::to_vec(forward).cross(Vector3::unit_y())
+        if self.position.y < 0.0 {
+            self.position.y = 0.0;
         }
 
-        vec
-    }
-
-    fn accelerate(velocity: &mut Vector3<f32>, wish_dir: Vector3<f32>, dt: f32) {
-        let proj_speed = Vector3::dot(*velocity, wish_dir);
-        let add_speed = MAX_SPEED_ON_ONE_DIMENSION - proj_speed;
-        if add_speed < 0.0 {
-            return;
-        }
-
-        let mut accel_amount = ACCELERATION * MAX_SPEED_ON_ONE_DIMENSION * dt;
-        if accel_amount > add_speed {
-            accel_amount = add_speed;
-        }
-
-        *velocity += wish_dir * accel_amount;
-    }
-
-    fn apply_friction(velocity: &mut Vector3<f32>, dt: f32) {
-        let speed = velocity.magnitude();
-        if speed > 0.0001 {
-            let mut drop_amount = speed - (speed * FRICTION * dt);
-            if drop_amount < 0.0 {
-                drop_amount = 0.0;
-            }
-            *velocity *= drop_amount / speed;
-        }
+        self.position
     }
 
     pub fn get_view_matrix(&self) -> Matrix4<f32> {
@@ -97,5 +63,58 @@ impl Player {
             self.position + EuclideanSpace::to_vec(self.forward),
             vec3(0.0, 1.0, 0.0), // Always up
         )
+    }
+}
+
+fn set_forward(forward: &mut Point3<f32>, mouse: (f32, f32)) {
+    let (mouse_x, mouse_y) = mouse;
+
+    let horz_rot = Quaternion::from_axis_angle(Vector3::unit_y(), Rad(-mouse_x) * SENSITIVITY);
+    *forward = horz_rot.rotate_point(*forward);
+
+    let left = EuclideanSpace::to_vec(*forward).cross(Vector3::unit_y());
+    *forward =
+        Quaternion::from_axis_angle(left, Rad(-mouse_y) * SENSITIVITY).rotate_point(*forward);
+}
+
+fn get_wish_dir(keys: &Keys, forward: Point3<f32>) -> Vector3<f32> {
+    let mut vec = Vector3::<f32>::zero();
+    if keys.get_key(Keycode::W) {
+        vec += cgmath::EuclideanSpace::to_vec(forward)
+    } else if keys.get_key(Keycode::S) {
+        vec -= cgmath::EuclideanSpace::to_vec(forward)
+    }
+    if keys.get_key(Keycode::A) {
+        vec -= cgmath::EuclideanSpace::to_vec(forward).cross(Vector3::unit_y())
+    } else if keys.get_key(Keycode::D) {
+        vec += cgmath::EuclideanSpace::to_vec(forward).cross(Vector3::unit_y())
+    }
+
+    vec
+}
+
+fn accelerate(velocity: &mut Vector3<f32>, wish_dir: Vector3<f32>, accel_coeff: f32, dt: f32) {
+    let proj_speed = Vector3::dot(*velocity, wish_dir);
+    let add_speed = MAX_SPEED_ON_ONE_DIMENSION - proj_speed;
+    if add_speed < 0.0 {
+        return;
+    }
+
+    let mut accel_amount = accel_coeff * MAX_SPEED_ON_ONE_DIMENSION * dt;
+    if accel_amount > add_speed {
+        accel_amount = add_speed;
+    }
+
+    *velocity += wish_dir * accel_amount;
+}
+
+fn apply_friction(velocity: &mut Vector3<f32>, dt: f32) {
+    let speed = velocity.magnitude();
+    if speed > 0.0001 {
+        let mut drop_amount = speed - (speed * GROUND_FRICTION * dt);
+        if drop_amount < 0.0 {
+            drop_amount = 0.0;
+        }
+        *velocity *= drop_amount / speed;
     }
 }

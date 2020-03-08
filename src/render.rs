@@ -50,6 +50,6 @@ pub fn get_projection_matrix() -> Matrix4<f32> {
         cgmath::Deg(45.0),
         SCREEN_SIZE.x as f32 / SCREEN_SIZE.y as f32,
         0.1,
-        100.0,
+        1000.0,
     )
 }

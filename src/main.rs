@@ -7,9 +7,7 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::path::Path;
 
-type vec3 = Vector3<f32>;
-
-mod camera;
+mod keys;
 mod material;
 mod mesh;
 mod object;
@@ -28,7 +26,7 @@ fn main() {
 
     let mut time = time::Time::new(&sdl_context);
     let mut event_pump = sdl_context.event_pump().unwrap();
-    // let mut camera = camera::Camera::new();
+    let mut keys = keys::Keys::new();
     let mut player = player::Player::new();
 
     let (tobj_models, tobj_mats) = match tobj::load_obj(&Path::new("assets/cube.obj")) {
@@ -71,13 +69,15 @@ fn main() {
             }
         }
 
-        let keys: Vec<Keycode> = event_pump
-            .keyboard_state()
-            .pressed_scancodes()
-            .filter_map(Keycode::from_scancode)
-            .collect();
+        keys.tick(
+            event_pump
+                .keyboard_state()
+                .pressed_scancodes()
+                .filter_map(Keycode::from_scancode)
+                .collect(),
+        );
 
-        player.tick(dt, keys, (mouse_x, mouse_y));
+        player.tick(dt, &keys, (mouse_x, mouse_y));
 
         render::render(&window, &objects, player.get_view_matrix());
     }
