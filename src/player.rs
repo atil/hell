@@ -1,4 +1,6 @@
 use crate::keys::Keys;
+use crate::object::Object;
+use crate::physics;
 use cgmath::*;
 use sdl2::keyboard::Keycode;
 
@@ -15,6 +17,7 @@ pub struct Player {
     velocity: Vector3<f32>,
     position: Point3<f32>,
     forward: Point3<f32>,
+    is_grounded: bool,
 }
 
 impl Player {
@@ -23,16 +26,15 @@ impl Player {
             velocity: Vector3::<f32>::zero(),
             position: Point3::new(0.0, 0.0, 0.0),
             forward: Point3::new(0.0, 0.0, -1.0),
+            is_grounded: false,
         }
     }
 
-    pub fn tick(&mut self, dt: f32, keys: &Keys, mouse: (f32, f32)) -> Point3<f32> {
-        set_forward(&mut self.forward, mouse);
+    pub fn tick(&mut self, keys: &Keys, mouse: (f32, f32), objects: &Vec<Object>, dt: f32) {
+        mouse_look(&mut self.forward, mouse);
 
         let wish_dir = get_wish_dir(&keys, self.forward);
-
-        let is_grounded = self.position.y <= 0.0001; // Temp
-        if is_grounded {
+        if self.is_grounded {
             // Ground move
             accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
             apply_friction(&mut self.velocity, dt);
@@ -56,11 +58,15 @@ impl Player {
 
         self.position += self.velocity * dt;
 
-        if self.position.y < 0.0 {
-            self.position.y = 0.0;
-        }
+        let (displacement, is_grounded) = physics::step(&objects, self.position);
 
-        self.position
+        self.position += displacement;
+        self.is_grounded = is_grounded;
+
+        // Don't drop
+        if self.position.y < -10.0 {
+            self.position = Point3::new(0.0, 2.0, 0.0);
+        }
     }
 
     pub fn get_view_matrix(&self) -> Matrix4<f32> {
@@ -72,7 +78,7 @@ impl Player {
     }
 }
 
-fn set_forward(forward: &mut Point3<f32>, mouse: (f32, f32)) {
+fn mouse_look(forward: &mut Point3<f32>, mouse: (f32, f32)) {
     let (mouse_x, mouse_y) = mouse;
 
     let horz_rot = Quaternion::from_axis_angle(Vector3::unit_y(), Rad(-mouse_x) * SENSITIVITY);

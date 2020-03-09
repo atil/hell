@@ -2,15 +2,15 @@ extern crate tobj;
 use cgmath::*;
 
 pub struct Mesh {
-    vertices: Vec<Vector3<f32>>,
+    vertices: Vec<Point3<f32>>,
     indices: Vec<u32>,
     pub triangles: Vec<Triangle>,
 }
 
 pub struct Triangle {
-    pub p0: Vector3<f32>,
-    pub p1: Vector3<f32>,
-    pub p2: Vector3<f32>,
+    pub p0: Point3<f32>,
+    pub p1: Point3<f32>,
+    pub p2: Point3<f32>,
 }
 
 pub fn read_vertex_array(mesh: &tobj::Mesh) -> (Vec<f32>, Vec<u32>) {
@@ -21,6 +21,7 @@ pub fn read_vertex_array(mesh: &tobj::Mesh) -> (Vec<f32>, Vec<u32>) {
         .chunks(3)
         .zip(texcoords.chunks(2))
         .zip(normals.chunks(3));
+
     let vertex_data = iter_zip
         // (([v, v, v], [tx, tx]), [n, n])
         .map(|vec_tuple| {
@@ -48,8 +49,8 @@ impl Mesh {
         let vertices = mesh
             .positions
             .chunks(3)
-            .map(|slice| Vector3::new(slice[0], slice[1], slice[2]))
-            .collect::<Vec<Vector3<f32>>>();
+            .map(|slice| Point3::new(slice[0], slice[1], slice[2]))
+            .collect::<Vec<Point3<f32>>>();
 
         let triangles = indices.chunks(3).fold(Vec::new(), |mut vec, next_three| {
             let i0: usize = next_three[0] as usize;

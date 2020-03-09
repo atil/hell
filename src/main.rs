@@ -49,6 +49,7 @@ fn main() {
 
     let objects = vec![object];
 
+    let mut is_player_grounded = false;
     'main: loop {
         let (mut mouse_x, mut mouse_y) = (0.0, 0.0);
 
@@ -77,7 +78,7 @@ fn main() {
                 .collect(),
         );
 
-        player.tick(dt, &keys, (mouse_x, mouse_y));
+        player.tick(&keys, (mouse_x, mouse_y), &objects, dt);
 
         render::render(&window, &objects, player.get_view_matrix());
     }
