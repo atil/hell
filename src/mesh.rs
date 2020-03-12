@@ -1,16 +1,11 @@
 extern crate tobj;
+use crate::geom::Triangle;
 use cgmath::*;
 
 pub struct Mesh {
     vertices: Vec<Point3<f32>>,
     indices: Vec<u32>,
     pub triangles: Vec<Triangle>,
-}
-
-pub struct Triangle {
-    pub p0: Point3<f32>,
-    pub p1: Point3<f32>,
-    pub p2: Point3<f32>,
 }
 
 pub fn read_vertex_array(mesh: &tobj::Mesh) -> (Vec<f32>, Vec<u32>) {
@@ -61,6 +56,8 @@ impl Mesh {
                 p0: vertices[i0],
                 p1: vertices[i1],
                 p2: vertices[i2],
+                normal: Vector3::cross(vertices[i1] - vertices[i0], vertices[i2] - vertices[i0])
+                    .normalize(),
             });
 
             vec

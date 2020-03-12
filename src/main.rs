@@ -7,6 +7,7 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::path::Path;
 
+mod geom;
 mod keys;
 mod material;
 mod mesh;
