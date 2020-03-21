@@ -68,15 +68,6 @@ impl Program {
             matrix.as_ptr(),
         );
     }
-    pub unsafe fn set_vector3(&self, name: &str, slice: [f32; 3]) {
-        gl::Uniform4f(
-            self.get_uniform_location(name),
-            slice[0],
-            slice[1],
-            slice[2],
-            1.0,
-        );
-    }
 
     pub unsafe fn set_i32(&self, name: &str, integer: i32) {
         gl::Uniform1i(self.get_uniform_location(name), integer);

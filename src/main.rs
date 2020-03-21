@@ -50,7 +50,7 @@ fn main() {
 
     let objects = vec![object];
 
-    let mut is_player_grounded = false;
+    let _is_player_grounded = false;
     'main: loop {
         let (mut mouse_x, mut mouse_y) = (0.0, 0.0);
 

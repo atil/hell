@@ -3,8 +3,6 @@ use crate::geom::Triangle;
 use cgmath::*;
 
 pub struct Mesh {
-    vertices: Vec<Point3<f32>>,
-    indices: Vec<u32>,
     pub triangles: Vec<Triangle>,
 }
 
@@ -52,20 +50,12 @@ impl Mesh {
             let i1: usize = next_three[1] as usize;
             let i2: usize = next_three[2] as usize;
 
-            vec.push(Triangle {
-                p0: vertices[i0],
-                p1: vertices[i1],
-                p2: vertices[i2],
-                normal: Vector3::cross(vertices[i1] - vertices[i0], vertices[i2] - vertices[i0])
-                    .normalize(),
-            });
+            vec.push(Triangle::new(vertices[i0], vertices[i1], vertices[i2]));
 
             vec
         });
 
         Mesh {
-            vertices: vertices,
-            indices: indices,
             triangles: triangles,
         }
     }
