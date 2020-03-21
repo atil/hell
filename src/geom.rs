@@ -24,23 +24,27 @@ pub fn is_point_in_triangle(point: Point3<f32>, tri: Triangle) -> bool {
     c1.y > 0.0 && c2.y > 0.0 && c3.y > 0.0
 }
 
-pub fn point_line_segment_distance(point: Point3<f32>, p0: Point3<f32>, p1: Point3<f32>) -> f32 {
+pub fn get_closest_point_on_line_segment(
+    point: Point3<f32>,
+    p0: Point3<f32>,
+    p1: Point3<f32>,
+) -> (Point3<f32>, f32) {
     // TODO: Lots of sqrt here
     let dot = Vector3::dot(point - p0, p1 - p0);
     let line_segment_length = (p1 - p0).magnitude();
     if 0.0 < dot && dot < line_segment_length {
-        // on the line segment
+        // projection is on the line segment
         let line_segment_dir = (p1 - p0).normalize();
         let point_on_line = p0 + dot * line_segment_dir;
-        return (point - point_on_line).magnitude();
+        return (point_on_line, (point - point_on_line).magnitude());
     } else {
         // not on the segment, take the shorter one
         let dist1 = (point - p0).magnitude();
         let dist2 = (point - p1).magnitude();
         if dist1 < dist2 {
-            return dist1;
+            return (p0, dist1);
         } else {
-            return dist2;
+            return (p1, dist2);
         }
     }
 }

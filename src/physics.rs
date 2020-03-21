@@ -41,10 +41,22 @@ fn resolve(player_shape: PlayerShape, triangle: Triangle) -> Vector3<f32> {
     }
 
     let point_on_plane = project_point_on_triangle_plane(closer_point, triangle);
-    let (penet, dir) = match is_point_in_triangle(point_on_plane, triangle) {
-        true => (closer_dist_to_plane, triangle.normal),
-        false => todo!(),
-    };
 
-    Vector3::zero()
+    match is_point_in_triangle(point_on_plane, triangle) {
+        true => closer_dist_to_plane * triangle.normal,
+        false => {
+            let (p1, d1) =
+                get_closest_point_on_line_segment(point_on_plane, triangle.p0, triangle.p1);
+            let (p2, d2) =
+                get_closest_point_on_line_segment(point_on_plane, triangle.p1, triangle.p2);
+            let (p3, d3) =
+                get_closest_point_on_line_segment(point_on_plane, triangle.p2, triangle.p0);
+
+            match d1.min(d2.min(d3)) {
+                d1 => closer_point - p1,
+                d2 => closer_point - p2,
+                d3 => closer_point - p3,
+            }
+        }
+    }
 }
