@@ -24,7 +24,16 @@ pub fn point_triangle_plane_distance(point: Point3<f32>, triangle: Triangle) -> 
 }
 
 pub fn project_point_on_triangle_plane(point: Point3<f32>, triangle: Triangle) -> Point3<f32> {
-    point + (point_triangle_plane_distance(point, triangle) * -triangle.normal)
+    // -1 means up
+    let side = {
+        if Vector3::dot(point - triangle.p0, EuclideanSpace::to_vec(triangle.p0)) > 0.0 {
+            -1.0
+        } else {
+            1.0
+        }
+    };
+
+    point + (point_triangle_plane_distance(point, triangle) * side * triangle.normal)
 }
 
 pub fn is_point_in_triangle(point: Point3<f32>, tri: Triangle) -> bool {
@@ -72,8 +81,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
-    fn test_resolve() {
+    fn test_is_point_in_triangle() {
         let tri = Triangle::new(
             Point3::new(0.5, -1.0, -1.0),
             Point3::new(0.5, -1.0, 1.0),
@@ -81,5 +89,21 @@ mod tests {
         );
 
         assert!(is_point_in_triangle(Point3::new(0.5, 0.0, 0.0), tri));
+    }
+
+    #[test]
+    fn test_project_point_on_triangle_plane() {
+        let p = Point3::new(0.0, -0.5, 0.0);
+        let tri = Triangle::new(
+            Point3::new(1.0, -0.25, 0.0),
+            Point3::new(0.0, -0.25, -1.0),
+            Point3::new(-1.0, -0.25, 0.0),
+        );
+
+        println!("++++++++++++++{:?}", tri.normal);
+        assert_eq!(
+            project_point_on_triangle_plane(p, tri),
+            Point3::new(0.0, -0.25, 0.0)
+        );
     }
 }
