@@ -48,9 +48,11 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3
     }
 
     let point_on_plane = project_point_on_triangle_plane(closer_point, triangle);
-
     match is_point_in_triangle(point_on_plane, triangle) {
-        true => closer_dist_to_plane * triangle.normal,
+        true => {
+            (closer_dist_to_plane + player_shape.radius)
+                * (point_on_plane - closer_point).normalize()
+        }
         false => {
             let (p1, d1) =
                 get_closest_point_on_line_segment(point_on_plane, triangle.p0, triangle.p1);
@@ -74,33 +76,48 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
     fn test_resolve() {
-        let player_pos = point(0, 0, 0);
-        let player_shape = PlayerShape {
-            capsule0: Point3::new(0.0, 0.5, 0.0) + EuclideanSpace::to_vec(player_pos),
-            capsule1: Point3::new(0.0, -0.5, 0.0) + EuclideanSpace::to_vec(player_pos),
-            radius: 1.0,
-        };
+        let player_shape = setup_player_shape();
 
         let tri = Triangle::new(
-            Point3::new(0.5, -1.0, -1.0),
-            Point3::new(0.5, -1.0, 1.0),
-            Point3::new(0.5, 1.0, 0.0),
-        );
-
-        println!(
-            "+++++++ {:?}",
-            is_point_in_triangle(Point3::new(0.5, 0.0, 0.0), tri)
+            Point3::new(1.0, -0.25, 0.0),
+            Point3::new(0.0, -0.25, -1.0),
+            Point3::new(-1.0, -0.25, 0.0),
         );
 
         assert_eq!(
             compute_penetration(player_shape, tri),
-            Vector3::new(-0.5, 0.0, 0.0)
+            Vector3::new(0.0, 0.75, 0.0)
+        );
+    }
+
+    #[test]
+    fn test_resolve_no_collision() {
+        let player_shape = setup_player_shape();
+
+        let tri = Triangle::new(
+            Point3::new(1.0, 1.25, 0.0),
+            Point3::new(0.0, 1.25, -1.0),
+            Point3::new(-1.0, 1.25, 0.0),
+        );
+
+        assert_eq!(
+            compute_penetration(player_shape, tri),
+            Vector3::new(0.0, 0.0, 0.0)
         );
     }
 
     fn point(a: i32, b: i32, c: i32) -> Point3<f32> {
         Point3::new(a as f32, b as f32, c as f32)
+    }
+
+    fn setup_player_shape() -> PlayerShape {
+        let player_pos = point(0, 0, 0);
+
+        PlayerShape {
+            capsule0: Point3::new(0.0, 0.5, 0.0) + EuclideanSpace::to_vec(player_pos),
+            capsule1: Point3::new(0.0, -0.5, 0.0) + EuclideanSpace::to_vec(player_pos),
+            radius: 0.5,
+        }
     }
 }

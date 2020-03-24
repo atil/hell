@@ -45,6 +45,10 @@ pub fn is_point_in_triangle(point: Point3<f32>, tri: Triangle) -> bool {
     let c2 = Vector3::cross(tri.p2 - tri.p1, point - tri.p1);
     let c3 = Vector3::cross(tri.p0 - tri.p2, point - tri.p2);
 
+    if c1 == Vector3::zero() || c2 == Vector3::zero() || c3 == Vector3::zero() {
+        return true; // On triangle
+    }
+
     Vector3::dot(c1.normalize(), tri.normal).abs() == 1.0
         && Vector3::dot(c2.normalize(), tri.normal).abs() == 1.0
         && Vector3::dot(c3.normalize(), tri.normal).abs() == 1.0
