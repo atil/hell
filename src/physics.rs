@@ -3,11 +3,21 @@ use crate::object::Object;
 use cgmath::*;
 use std::cmp::Ordering;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct PlayerShape {
     capsule0: Point3<f32>,
     capsule1: Point3<f32>,
     radius: f32,
+}
+
+impl std::fmt::Display for PlayerShape {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "C0: [{:?}] C1: [{:?}] R:{:?}",
+            self.capsule0, self.capsule1, self.radius
+        )
+    }
 }
 
 pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bool) {

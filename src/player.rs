@@ -24,7 +24,7 @@ impl Player {
     pub fn new() -> Player {
         Player {
             velocity: Vector3::<f32>::zero(),
-            position: Point3::new(0.0, 0.0, 0.0),
+            position: Point3::new(0.0, 13.0, 0.0),
             forward: Point3::new(0.0, 0.0, -1.0),
             is_grounded: false,
         }

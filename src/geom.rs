@@ -1,6 +1,6 @@
 use cgmath::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Triangle {
     pub p0: Point3<f32>,
     pub p1: Point3<f32>,
@@ -19,15 +19,24 @@ impl Triangle {
     }
 }
 
+impl std::fmt::Display for Triangle {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "P0: [{:?}] P1: [{:?}] P2:{:?}",
+            self.p0, self.p1, self.p2
+        )
+    }
+}
+
 pub fn point_triangle_plane_distance(point: Point3<f32>, triangle: Triangle) -> f32 {
     Vector3::dot(point - triangle.p0, triangle.normal).abs()
 }
 
 pub fn project_point_on_triangle_plane(point: Point3<f32>, triangle: Triangle) -> Point3<f32> {
-    // -1 means up
     let side = {
-        if Vector3::dot(point - triangle.p0, EuclideanSpace::to_vec(triangle.p0)) > 0.0 {
-            -1.0
+        if Vector3::dot(point - triangle.p0, triangle.normal) > 0.0 {
+            -1.0 // The same side with the normal
         } else {
             1.0
         }
@@ -38,7 +47,11 @@ pub fn project_point_on_triangle_plane(point: Point3<f32>, triangle: Triangle) -
 
 pub fn is_point_in_triangle(point: Point3<f32>, tri: Triangle) -> bool {
     if Vector3::dot(point - tri.p0, tri.normal) != 0.0 {
-        panic!("attempted to perform point-triangle check on non-coplanar point-triangle");
+        panic!(format!(
+            "attempted to perform point-triangle check on non-coplanar point-triangle\n {:?}\n {:?}\n {:?}",
+            point, tri.p0,
+            tri.normal
+        ));
     }
 
     let c1 = Vector3::cross(tri.p1 - tri.p0, point - tri.p0);
@@ -108,6 +121,20 @@ mod tests {
         assert_eq!(
             project_point_on_triangle_plane(p, tri),
             Point3::new(0.0, -0.25, 0.0)
+        );
+    }
+
+    #[test]
+    fn test_project_point_on_triangle_plane_2() {
+        let p = Point3::new(0.0, -1.49, 0.0);
+        let tri = Triangle::new(
+            Point3::new(-29.0, -1.0, 29.0),
+            Point3::new(29.0, -1.0, -29.0),
+            Point3::new(29.0, -1.0, 29.0),
+        );
+        assert_eq!(
+            project_point_on_triangle_plane(p, tri),
+            Point3::new(0.0, -1.0, 0.0)
         );
     }
 }
