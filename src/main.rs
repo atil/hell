@@ -45,7 +45,7 @@ fn main() {
 
     let mesh = mesh::Mesh::new(&tobj_models[0].mesh);
     let mut object = object::Object::new(&material, &mesh);
-    object.translate(Vector3::new(0.0, -5.0, -10.0));
+    object.translate(Vector3::new(0.0, 0.0, -10.0));
     object.rotate(Vector3::unit_y(), 30.0);
 
     let objects = vec![object];
