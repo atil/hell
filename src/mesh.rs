@@ -42,7 +42,13 @@ impl Mesh {
         let vertices = mesh
             .positions
             .chunks(3)
-            .map(|slice| Point3::new(slice[0], slice[1], slice[2]))
+            .map(|slice| {
+                Point3::new(
+                    slice_excess(slice[0]),
+                    slice_excess(slice[1]),
+                    slice_excess(slice[2]),
+                )
+            })
             .collect::<Vec<Point3<f32>>>();
 
         let triangles = indices.chunks(3).fold(Vec::new(), |mut vec, next_three| {
@@ -59,4 +65,8 @@ impl Mesh {
             triangles: triangles,
         }
     }
+}
+
+fn slice_excess(float: f32) -> f32 {
+    (float * 100.0).round() / 100.0
 }
