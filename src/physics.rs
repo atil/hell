@@ -47,7 +47,8 @@ fn spherecast(objects: &Vec<Object>, player_shape: PlayerShape) -> bool {
         for tri in &obj.mesh.triangles {
             if line_segment_triangle_distance(p0, p1, *tri) < 0.1 {
                 hit_triangle = true;
-                println!("++++++\n{:?}\n{:?}\n", player_shape, *tri);
+                let dist = line_segment_triangle_distance(p0, p1, *tri);
+                println!("++++++{}\n{:?}\n{:?}\n", dist, player_shape, *tri);
                 break 'all;
             }
         }
@@ -86,12 +87,38 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3
     };
 
     if closer_dist_to_plane > player_shape.radius {
+        // Away from the triangle plane
         return Vector3::<f32>::zero();
     }
 
     let point_on_plane = project_point_on_triangle_plane(closer_point, triangle);
 
-    (closer_tip_point - point_on_plane).magnitude() * triangle.normal
+    if is_point_in_triangle(point_on_plane, triangle) {
+        // Projected point is in triangle
+        // Since we're close to the plane, this case is a definite penetration
+        (closer_tip_point - point_on_plane).magnitude() * triangle.normal
+    } else {
+        // Projected point isn't in triangle. Return the vector to the closest point on triangle
+        let (p1, d1) = get_closest_point_on_line_segment(point_on_plane, triangle.p0, triangle.p1);
+        let (p2, d2) = get_closest_point_on_line_segment(point_on_plane, triangle.p1, triangle.p2);
+        let (p3, d3) = get_closest_point_on_line_segment(point_on_plane, triangle.p2, triangle.p0);
+
+        let min_dist = d1.min(d2.min(d3));
+        if min_dist > player_shape.radius {
+            return Vector3::<f32>::zero();
+        }
+
+        // TODO: This is wrong? Displacement should be towards a point on the capsule, not to
+        // the line segment. We should:
+        // closerpoint + (closerpoint - px).normalize() * radius
+
+        match min_dist {
+            x if x == d1 => closer_point - p1,
+            x if x == d2 => closer_point - p2,
+            x if x == d3 => closer_point - p3,
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -137,8 +164,8 @@ mod tests {
     #[test]
     fn test_resolve_3() {
         let player_shape = PlayerShape {
-            capsule0: Point3::new(0.0, 1.9283209, 0.0000009736774),
-            capsule1: Point3::new(0.0, 0.9283209, 0.0000009736774),
+            capsule0: Point3::new(0.0, 1.92, 0.0),
+            capsule1: Point3::new(0.0, 0.92, 0.0),
             radius: 0.5,
         };
 
@@ -150,12 +177,28 @@ mod tests {
 
         assert_eq!(
             compute_penetration(player_shape, tri),
-            Vector3::new(0.0, 1.0 - 0.9283209 + 0.5, 0.0)
+            Vector3::new(0.0, 1.0 - 0.92 + 0.5, 0.0)
         );
     }
 
     #[test]
     fn test_resolve_no_collision() {
+        let player_shape = setup_player_shape();
+
+        let tri = Triangle::new(
+            Point3::new(10.0, 0.0, 0.0),
+            Point3::new(9.0, 0.0, -1.0),
+            Point3::new(8.0, 0.0, 0.0),
+        );
+
+        assert_eq!(
+            compute_penetration(player_shape, tri),
+            Vector3::<f32>::zero()
+        );
+    }
+
+    #[test]
+    fn test_resolve_no_collision_2() {
         let player_shape = setup_player_shape();
 
         let tri = Triangle::new(
