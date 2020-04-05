@@ -1,4 +1,5 @@
 use cgmath::*;
+use std::cmp::Ordering;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Triangle {
@@ -53,18 +54,11 @@ pub fn is_point_in_triangle(point: Point3<f32>, tri: Triangle) -> bool {
         ));
     }
 
-    let c1 = Vector3::cross(tri.p1 - tri.p0, point - tri.p0);
-    let c2 = Vector3::cross(tri.p2 - tri.p1, point - tri.p1);
-    let c3 = Vector3::cross(tri.p0 - tri.p2, point - tri.p2);
+    let d1 = Vector3::dot(tri.p1 - tri.p0, point - tri.p0);
+    let d2 = Vector3::dot(tri.p2 - tri.p1, point - tri.p1);
+    let d3 = Vector3::dot(tri.p0 - tri.p2, point - tri.p2);
 
-    const EPSILON: f32 = 0.001;
-    if c1.magnitude2() < EPSILON || c2.magnitude2() < EPSILON || c3.magnitude2() < EPSILON {
-        return true; // On triangle
-    }
-
-    Vector3::dot(c1.normalize(), tri.normal).abs() == 1.0
-        && Vector3::dot(c2.normalize(), tri.normal).abs() == 1.0
-        && Vector3::dot(c3.normalize(), tri.normal).abs() == 1.0
+    d1 > 0.0 && d2 > 0.0 && d3 > 0.0
 }
 
 pub fn get_closest_point_on_line_segment(
@@ -93,6 +87,40 @@ pub fn get_closest_point_on_line_segment(
     }
 }
 
+pub fn line_segment_triangle_distance(p0: Point3<f32>, p1: Point3<f32>, triangle: Triangle) -> f32 {
+    let dist1 = point_triangle_plane_distance(p0, triangle);
+    let dist2 = point_triangle_plane_distance(p1, triangle);
+
+    let closer_point = match dist1.partial_cmp(&dist2) {
+        Some(Ordering::Less) => p0,
+        Some(Ordering::Greater) => p1,
+        Some(Ordering::Equal) => p0 + (p1 - p0) * 0.5,
+        None => panic!(format!(
+            "Invalid line-segment / point comparison {} and {}",
+            dist1, dist2
+        )),
+    };
+
+    let point_on_plane = project_point_on_triangle_plane(closer_point, triangle);
+    match is_point_in_triangle(point_on_plane, triangle) {
+        true => (closer_point - point_on_plane).magnitude(),
+        false => {
+            let (_, d1) =
+                get_closest_point_on_line_segment(point_on_plane, triangle.p0, triangle.p1);
+            let (_, d2) =
+                get_closest_point_on_line_segment(point_on_plane, triangle.p1, triangle.p2);
+            let (_, d3) =
+                get_closest_point_on_line_segment(point_on_plane, triangle.p2, triangle.p0);
+
+            d1.min(d2.min(d3))
+        }
+    }
+}
+
+pub fn midpoint(p0: Point3<f32>, p1: Point3<f32>) -> Point3<f32> {
+    p0 + (p1 - p0) * 0.5
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,7 +145,6 @@ mod tests {
             Point3::new(-1.0, -0.25, 0.0),
         );
 
-        println!("++++++++++++++{:?}", tri.normal);
         assert_eq!(
             project_point_on_triangle_plane(p, tri),
             Point3::new(0.0, -0.25, 0.0)
@@ -136,5 +163,47 @@ mod tests {
             project_point_on_triangle_plane(p, tri),
             Point3::new(0.0, -1.0, 0.0)
         );
+    }
+
+    #[test]
+    fn test_line_segment_triangle_distance_1() {
+        let tri = Triangle::new(
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(0.0, 0.0, -1.0),
+            Point3::new(-1.0, 0.0, 0.0),
+        );
+
+        let p0 = Point3::new(0.0, 0.5, 0.0);
+        let p1 = Point3::new(0.0, -0.5, 0.0);
+
+        assert_eq!(line_segment_triangle_distance(p0, p1, tri), 0.0);
+    }
+
+    #[test]
+    fn test_line_segment_triangle_distance_2() {
+        let tri = Triangle::new(
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(0.0, 0.0, -1.0),
+            Point3::new(-1.0, 0.0, 0.0),
+        );
+
+        let p0 = Point3::new(0.0, 1.5, 0.0);
+        let p1 = Point3::new(0.0, 0.5, 0.0);
+
+        assert_eq!(line_segment_triangle_distance(p0, p1, tri), 0.5);
+    }
+
+    #[test]
+    fn test_line_segment_triangle_distance_3() {
+        let tri = Triangle::new(
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(0.0, 0.0, -1.0),
+            Point3::new(-1.0, 0.0, 0.0),
+        );
+
+        let p0 = Point3::new(3.0, 0.5, 0.0);
+        let p1 = Point3::new(3.0, -0.5, 0.0);
+
+        assert_eq!(line_segment_triangle_distance(p0, p1, tri), 2.0);
     }
 }
