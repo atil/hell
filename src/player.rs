@@ -62,11 +62,6 @@ impl Player {
 
         self.position += displacement;
         self.is_grounded = is_grounded;
-
-        // Don't drop
-        if self.position.y < -10.0 {
-            self.position = Point3::new(0.0, 2.0, 0.0);
-        }
     }
 
     pub fn get_view_matrix(&self) -> Matrix4<f32> {

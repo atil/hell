@@ -47,8 +47,6 @@ fn spherecast(objects: &Vec<Object>, player_shape: PlayerShape) -> bool {
         for tri in &obj.mesh.triangles {
             if line_segment_triangle_distance(p0, p1, *tri) < 0.1 {
                 hit_triangle = true;
-                let dist = line_segment_triangle_distance(p0, p1, *tri);
-                println!("++++++{}\n{:?}\n{:?}\n", dist, player_shape, *tri);
                 break 'all;
             }
         }
