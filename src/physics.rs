@@ -29,7 +29,7 @@ pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bo
 
     let mut total_displacement = Vector3::<f32>::zero();
     for obj in objects {
-        for tri in &obj.mesh.triangles {
+        for tri in &obj.triangles {
             total_displacement += compute_penetration(player_shape, *tri);
         }
     }
@@ -39,13 +39,14 @@ pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bo
 }
 
 fn spherecast(objects: &Vec<Object>, player_shape: PlayerShape) -> bool {
-    let p0 = midpoint(player_shape.capsule0, player_shape.capsule1);
+    let p0 = player_shape.capsule0;
     let p1 = p0 - Vector3::unit_y() * 2.0;
 
     let mut hit_triangle = false;
     'all: for obj in objects {
-        for tri in &obj.mesh.triangles {
-            if line_segment_triangle_distance(p0, p1, *tri) < 0.1 {
+        for tri in &obj.triangles {
+            let dist = line_segment_triangle_distance(p0, p1, *tri);
+            if dist < 0.1 {
                 hit_triangle = true;
                 break 'all;
             }

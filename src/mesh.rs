@@ -1,5 +1,6 @@
 extern crate tobj;
 use crate::geom::Triangle;
+use crate::math::*;
 use cgmath::*;
 
 pub struct Mesh {
@@ -65,8 +66,4 @@ impl Mesh {
             triangles: triangles,
         }
     }
-}
-
-fn slice_excess(float: f32) -> f32 {
-    (float * 100.0).round() / 100.0
 }

@@ -10,6 +10,7 @@ use std::path::Path;
 mod geom;
 mod keys;
 mod material;
+mod math;
 mod mesh;
 mod object;
 mod physics;
@@ -44,13 +45,13 @@ fn main() {
     );
 
     let mesh = mesh::Mesh::new(&tobj_models[0].mesh);
-    let mut object = object::Object::new(&material, &mesh);
-    object.translate(Vector3::new(0.0, 0.0, -10.0));
-    object.rotate(Vector3::unit_y(), 30.0);
+    let object1 = object::Object::new(&material, &mesh);
 
-    let objects = vec![object];
+    let mut object2 = object::Object::new(&material, &mesh);
+    object2.translate(Vector3::new(70.0, 0.0, 0.0));
 
-    let _is_player_grounded = false;
+    let objects = vec![object1, object2];
+
     'main: loop {
         let (mut mouse_x, mut mouse_y) = (0.0, 0.0);
 

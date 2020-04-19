@@ -1,3 +1,4 @@
+use crate::math::*;
 use cgmath::*;
 use std::cmp::Ordering;
 
@@ -19,6 +20,21 @@ impl Triangle {
             p2: p2,
             normal: c.normalize(),
             area: c.magnitude() / 2.0,
+        }
+    }
+
+    pub fn transformed_by(&self, m: Matrix4<f32>) -> Triangle {
+        let p0 = m.transform_point(self.p0);
+        let p1 = m.transform_point(self.p1);
+        let p2 = m.transform_point(self.p2);
+        let c = Vector3::cross(self.p1 - self.p0, self.p2 - self.p0);
+
+        Triangle {
+            p0: p0,
+            p1: p1,
+            p2: p2,
+            normal: c.normalize(),
+            area: self.area,
         }
     }
 }
@@ -68,7 +84,10 @@ pub fn is_point_in_triangle(point: Point3<f32>, tri: Triangle) -> bool {
     let b = Vector3::cross(tri.p2 - point, tri.p0 - point).magnitude() / (2.0 * tri.area);
     let c = Vector3::cross(tri.p0 - point, tri.p1 - point).magnitude() / (2.0 * tri.area);
 
-    0.0 <= a && a <= 1.0 && 0.0 <= b && b <= 1.0 && 0.0 <= c && c <= 1.0 && a + b + c == 1.0
+    in_between(a, 0.0, 1.0)
+        && in_between(b, 0.0, 1.0)
+        && in_between(c, 0.0, 1.0)
+        && approx(a + b + c, 1.0)
 }
 
 pub fn get_closest_point_on_line_segment(
@@ -171,6 +190,20 @@ mod tests {
     }
 
     #[test]
+    fn test_is_point_in_triangle_3() {
+        let tri = Triangle::new(
+            Point3::new(-29.0, 1.0, 29.0),
+            Point3::new(29.0, 1.0, -29.0),
+            Point3::new(29.0, 1.0, 29.0),
+        );
+
+        assert!(is_point_in_triangle(
+            Point3::new(19.815203, 1.0, 0.4436245),
+            tri
+        ));
+    }
+
+    #[test]
     fn test_project_point_on_triangle_plane() {
         let p = Point3::new(0.0, -0.5, 0.0);
         let tri = Triangle::new(
@@ -269,5 +302,19 @@ mod tests {
 
         let d = ((18.0 * 18.0 + 0.0 * 0.0 + 1.0 * 1.0) as f32).sqrt();
         assert_eq!(line_segment_triangle_distance(p0, p1, tri), d);
+    }
+
+    #[test]
+    fn test_line_segment_triangle_distance_6() {
+        let tri = Triangle::new(
+            Point3::new(29.0, 1.0, -29.0),
+            Point3::new(-29.0, 1.0, 29.0),
+            Point3::new(29.0, 1.0, 29.0),
+        );
+
+        let p0 = Point3::new(19.815203, 2.5, 0.4436245);
+        let p1 = Point3::new(19.815203, 1.5, 0.4436245);
+
+        assert_eq!(line_segment_triangle_distance(p0, p1, tri), 0.5);
     }
 }

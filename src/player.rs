@@ -11,7 +11,7 @@ const AIR_ACCELERATION: f32 = 0.00001;
 const AIR_DECELERATION: f32 = 0.00005;
 const MAX_SPEED_ON_ONE_DIMENSION: f32 = 3.0;
 const GRAVITY: f32 = 0.0001;
-const JUMP_FORCE: f32 = 0.03;
+const JUMP_FORCE: f32 = 0.04;
 
 pub struct Player {
     velocity: Vector3<f32>,
@@ -30,7 +30,13 @@ impl Player {
         }
     }
 
-    pub fn tick(&mut self, keys: &Keys, mouse: (f32, f32), objects: &Vec<Object>, dt: f32) {
+    pub fn tick(
+        &mut self,
+        keys: &Keys,
+        mouse: (f32, f32),
+        collision_objects: &Vec<Object>,
+        dt: f32,
+    ) {
         mouse_look(&mut self.forward, mouse);
 
         let wish_dir = get_wish_dir(&keys, self.forward);
@@ -58,7 +64,7 @@ impl Player {
 
         self.position += self.velocity * dt;
 
-        let (displacement, is_grounded) = physics::step(&objects, self.position);
+        let (displacement, is_grounded) = physics::step(&collision_objects, self.position);
 
         self.position += displacement;
         self.is_grounded = is_grounded;
