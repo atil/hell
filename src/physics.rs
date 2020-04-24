@@ -8,6 +8,31 @@ struct PlayerShape {
     capsule0: Point3<f32>,
     capsule1: Point3<f32>,
     radius: f32,
+    tip0: Point3<f32>,
+    tip1: Point3<f32>,
+}
+
+impl PlayerShape {
+    pub fn new(position: Point3<f32>, height: f32, radius: f32) -> PlayerShape {
+        PlayerShape {
+            capsule0: position + Vector3::new(0.0, height / 2.0, 0.0),
+            capsule1: position - Vector3::new(0.0, height / 2.0, 0.0),
+            radius: radius,
+            tip0: position + Vector3::new(0.0, (height / 2.0) + radius, 0.0),
+            tip1: position - Vector3::new(0.0, (height / 2.0) + radius, 0.0),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn with_capsule_points(c0: Point3<f32>, c1: Point3<f32>, radius: f32) -> PlayerShape {
+        PlayerShape {
+            capsule0: c0,
+            capsule1: c1,
+            radius: radius,
+            tip0: c0 + Vector3::new(0.0, radius, 0.0),
+            tip1: c1 - Vector3::new(0.0, radius, 0.0),
+        }
+    }
 }
 
 impl std::fmt::Display for PlayerShape {
@@ -21,11 +46,7 @@ impl std::fmt::Display for PlayerShape {
 }
 
 pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bool) {
-    let player_shape = PlayerShape {
-        capsule0: Point3::new(0.0, 0.5, 0.0) + EuclideanSpace::to_vec(player_pos),
-        capsule1: Point3::new(0.0, -0.5, 0.0) + EuclideanSpace::to_vec(player_pos),
-        radius: 0.5,
-    };
+    let player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
 
     let mut total_displacement = Vector3::<f32>::zero();
     for obj in objects {
@@ -92,8 +113,13 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3
     }
 
     let point_on_plane = project_point_on_triangle_plane(closer_point, triangle);
+    let point_on_plane_c0 = project_point_on_triangle_plane(player_shape.tip0, triangle);
+    let point_on_plane_c1 = project_point_on_triangle_plane(player_shape.tip1, triangle);
 
-    if is_point_in_triangle(point_on_plane, triangle) {
+    if is_point_in_triangle(point_on_plane, triangle)
+        || is_point_in_triangle(point_on_plane_c0, triangle)
+        || is_point_in_triangle(point_on_plane_c1, triangle)
+    {
         // Projected point is in triangle
         // Since we're close to the plane, this case is a definite penetration
         (closer_tip_point - point_on_plane).magnitude() * triangle.normal
@@ -127,7 +153,11 @@ mod tests {
 
     #[test]
     fn test_resolve() {
-        let player_shape = setup_player_shape_at_zero();
+        let player_shape = PlayerShape::with_capsule_points(
+            Point3::new(0.0, 0.5, 0.0),
+            Point3::new(0.0, -0.5, 0.0),
+            0.5,
+        );
 
         let tri = Triangle::new(
             Point3::new(1.0, -0.25, 0.0),
@@ -143,11 +173,11 @@ mod tests {
 
     #[test]
     fn test_resolve_2() {
-        let player_shape = PlayerShape {
-            capsule0: Point3::new(0.0, 1.47, 0.0),
-            capsule1: Point3::new(0.0, 0.47, 0.0),
-            radius: 0.5,
-        };
+        let player_shape = PlayerShape::with_capsule_points(
+            Point3::new(0.0, 1.47, 0.0),
+            Point3::new(0.0, 0.47, 0.0),
+            0.5,
+        );
 
         let tri = Triangle::new(
             Point3::new(29.0, 1.0, -29.0),
@@ -163,11 +193,11 @@ mod tests {
 
     #[test]
     fn test_resolve_3() {
-        let player_shape = PlayerShape {
-            capsule0: Point3::new(0.0, 1.92, 0.0),
-            capsule1: Point3::new(0.0, 0.92, 0.0),
-            radius: 0.5,
-        };
+        let player_shape = PlayerShape::with_capsule_points(
+            Point3::new(0.0, 1.92, 0.0),
+            Point3::new(0.0, 0.92, 0.0),
+            0.5,
+        );
 
         let tri = Triangle::new(
             Point3::new(29.0, 1.0, -29.0),
@@ -194,6 +224,38 @@ mod tests {
         assert_eq!(
             compute_penetration(player_shape, tri),
             Vector3::new(0.07999992, 0.0, 0.0)
+        );
+    }
+
+    #[test]
+    fn test_resolve_5() {
+        let player_shape = setup_player_shape(-9.64, 1.47, -23.93);
+
+        let tri = Triangle::new(
+            Point3::new(-10.0, 3.0, -30.0),
+            Point3::new(-10.0, 0.0, -20.0),
+            Point3::new(-10.0, 0.0, -30.0),
+        );
+
+        assert_eq!(
+            compute_penetration(player_shape, tri),
+            Vector3::new(0.14000034, 0.0, 0.0)
+        );
+    }
+
+    #[test]
+    fn test_resolve_6() {
+        let player_shape = setup_player_shape(-9.7, 1.56, -23.49);
+
+        let tri = Triangle::new(
+            Point3::new(-10.0, 3.0, -30.0),
+            Point3::new(-10.0, 0.0, -20.0),
+            Point3::new(-10.0, 0.0, -30.0),
+        );
+
+        assert_eq!(
+            compute_penetration(player_shape, tri),
+            Vector3::new(0.19999981, 0.0, 0.0)
         );
     }
 
@@ -229,21 +291,11 @@ mod tests {
         );
     }
 
-    fn point(a: i32, b: i32, c: i32) -> Point3<f32> {
-        Point3::new(a as f32, b as f32, c as f32)
-    }
-
     fn setup_player_shape_at_zero() -> PlayerShape {
-        setup_player_shape(0.0, 0.0, 0.0)
+        PlayerShape::new(Point3::new(0.0, 0.0, 0.0), 1.0, 0.5)
     }
 
-    fn setup_player_shape(p0: f32, p1: f32, p2: f32) -> PlayerShape {
-        let player_pos = Point3::new(p0, p1, p2);
-
-        PlayerShape {
-            capsule0: Point3::new(0.0, 0.5, 0.0) + EuclideanSpace::to_vec(player_pos),
-            capsule1: Point3::new(0.0, -0.5, 0.0) + EuclideanSpace::to_vec(player_pos),
-            radius: 0.5,
-        }
+    fn setup_player_shape(a: f32, b: f32, c: f32) -> PlayerShape {
+        PlayerShape::new(Point3::new(a, b, c), 1.0, 0.5)
     }
 }
