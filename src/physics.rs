@@ -30,7 +30,8 @@ pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bo
     let mut total_displacement = Vector3::<f32>::zero();
     for obj in objects {
         for tri in &obj.triangles {
-            total_displacement += compute_penetration(player_shape, *tri);
+            let penet = compute_penetration(player_shape, *tri);
+            total_displacement += penet;
         }
     }
 
@@ -75,7 +76,7 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3
             let mid_point = midpoint(player_shape.capsule0, player_shape.capsule1);
             (
                 mid_point,
-                mid_point + triangle.normal * player_shape.radius,
+                mid_point - triangle.normal * player_shape.radius,
                 dist1,
             )
         }
@@ -126,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_resolve() {
-        let player_shape = setup_player_shape();
+        let player_shape = setup_player_shape_at_zero();
 
         let tri = Triangle::new(
             Point3::new(1.0, -0.25, 0.0),
@@ -181,8 +182,24 @@ mod tests {
     }
 
     #[test]
+    fn test_resolve_4() {
+        let player_shape = setup_player_shape(-9.58, 1.43, -20.92);
+
+        let tri = Triangle::new(
+            Point3::new(-10.0, 3.0, -30.0),
+            Point3::new(-10.0, 3.0, -20.0),
+            Point3::new(-10.0, 0.0, -20.0),
+        );
+
+        assert_eq!(
+            compute_penetration(player_shape, tri),
+            Vector3::new(0.07999992, 0.0, 0.0)
+        );
+    }
+
+    #[test]
     fn test_resolve_no_collision() {
-        let player_shape = setup_player_shape();
+        let player_shape = setup_player_shape_at_zero();
 
         let tri = Triangle::new(
             Point3::new(10.0, 0.0, 0.0),
@@ -198,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_resolve_no_collision_2() {
-        let player_shape = setup_player_shape();
+        let player_shape = setup_player_shape_at_zero();
 
         let tri = Triangle::new(
             Point3::new(1.0, 1.25, 0.0),
@@ -216,8 +233,12 @@ mod tests {
         Point3::new(a as f32, b as f32, c as f32)
     }
 
-    fn setup_player_shape() -> PlayerShape {
-        let player_pos = point(0, 0, 0);
+    fn setup_player_shape_at_zero() -> PlayerShape {
+        setup_player_shape(0.0, 0.0, 0.0)
+    }
+
+    fn setup_player_shape(p0: f32, p1: f32, p2: f32) -> PlayerShape {
+        let player_pos = Point3::new(p0, p1, p2);
 
         PlayerShape {
             capsule0: Point3::new(0.0, 0.5, 0.0) + EuclideanSpace::to_vec(player_pos),

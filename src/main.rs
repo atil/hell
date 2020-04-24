@@ -31,7 +31,7 @@ fn main() {
     let mut keys = keys::Keys::new();
     let mut player = player::Player::new();
 
-    let (tobj_models, tobj_mats) = match tobj::load_obj(&Path::new("assets/cube.obj")) {
+    let (tobj_models, tobj_mats) = match tobj::load_obj(&Path::new("assets/test_pb.obj")) {
         Ok(cube_obj) => cube_obj,
         Err(e) => panic!("Error during loading models: {}", e),
     };
@@ -45,7 +45,8 @@ fn main() {
     );
 
     let mesh = mesh::Mesh::new(&tobj_models[0].mesh);
-    let object1 = object::Object::new(&material, &mesh);
+    let mut object1 = object::Object::new(&material, &mesh);
+    object1.translate(Vector3::new(10.0, 0.0, -10.0));
 
     let mut object2 = object::Object::new(&material, &mesh);
     object2.translate(Vector3::new(70.0, 0.0, 0.0));
