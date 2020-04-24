@@ -163,6 +163,20 @@ pub fn midpoint(p0: Point3<f32>, p1: Point3<f32>) -> Point3<f32> {
     p0 + (p1 - p0) * 0.5
 }
 
+pub fn project_vector_on_plane(v: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32> {
+    let sqr_mag = Vector3::dot(n, n);
+    if sqr_mag.is_nan() || sqr_mag < 0.0001 {
+        return v;
+    }
+    let dot = Vector3::dot(v, n);
+
+    Vector3::new(
+        v.x - n.x * dot / sqr_mag,
+        v.y - n.y * dot / sqr_mag,
+        v.z - n.z * dot / sqr_mag,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

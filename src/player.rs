@@ -1,3 +1,4 @@
+use crate::geom::*;
 use crate::keys::Keys;
 use crate::object::Object;
 use crate::physics;
@@ -65,6 +66,8 @@ impl Player {
         self.position += self.velocity * dt;
 
         let (displacement, is_grounded) = physics::step(&collision_objects, self.position);
+
+        self.velocity = project_vector_on_plane(self.velocity, displacement.normalize());
 
         self.position += displacement;
         self.is_grounded = is_grounded;
