@@ -9,9 +9,9 @@ const GROUND_ACCELERATION: f32 = 0.005;
 const GROUND_FRICTION: f32 = 0.05;
 const AIR_ACCELERATION: f32 = 0.00001;
 const AIR_DECELERATION: f32 = 0.00005;
-const MAX_SPEED_ON_ONE_DIMENSION: f32 = 3.0;
-const GRAVITY: f32 = 0.0001;
-const JUMP_FORCE: f32 = 0.04;
+const MAX_SPEED_ON_ONE_DIMENSION: f32 = 0.75;
+const GRAVITY: f32 = 0.00003;
+const JUMP_FORCE: f32 = 0.01;
 
 pub struct Player {
     velocity: Vector3<f32>,
@@ -123,11 +123,15 @@ fn accelerate(velocity: &mut Vector3<f32>, wish_dir: Vector3<f32>, accel_coeff: 
 
 fn apply_friction(velocity: &mut Vector3<f32>, dt: f32) {
     let speed = velocity.magnitude();
-    if speed > 0.0001 {
-        let mut drop_amount = speed - (speed * GROUND_FRICTION * dt);
-        if drop_amount < 0.0 {
-            drop_amount = 0.0;
-        }
-        *velocity *= drop_amount / speed;
+
+    if speed < 0.001 {
+        *velocity = Vector3::zero();
+        return;
     }
+
+    let mut drop_amount = speed - (speed * GROUND_FRICTION * dt);
+    if drop_amount < 0.0 {
+        drop_amount = 0.0;
+    }
+    *velocity *= drop_amount / speed;
 }
