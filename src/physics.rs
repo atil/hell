@@ -30,6 +30,11 @@ impl PlayerShape {
         self.tip1 += displacement;
     }
 
+    pub fn is_behind_triangle(&self, tri: &Triangle) -> bool {
+        Vector3::dot(tri.normal, tri.p0 - self.capsule0) > 0.0
+            && Vector3::dot(tri.normal, tri.p0 - self.capsule1) > 0.0
+    }
+
     #[cfg(test)]
     pub fn with_capsule_points(c0: Point3<f32>, c1: Point3<f32>, radius: f32) -> PlayerShape {
         PlayerShape {
@@ -55,12 +60,14 @@ impl std::fmt::Display for PlayerShape {
 pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bool, Vector3<f32>) {
     let mut player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
 
-    let mut total_displacement = Vector3::<f32>::zero();
+    let mut total_displacement = Vector3::zero();
     for obj in objects {
         for tri in &obj.triangles {
             let penet = compute_penetration(player_shape, *tri);
-            player_shape.displace(penet);
-            total_displacement += penet;
+            if penet.magnitude2() > 0.001 {
+                player_shape.displace(penet);
+                total_displacement += penet;
+            }
         }
     }
 
@@ -90,6 +97,10 @@ fn spherecast(objects: &Vec<Object>, player_shape: PlayerShape) -> (bool, Vector
 }
 
 fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3<f32> {
+    if player_shape.is_behind_triangle(&triangle) {
+        return Vector3::zero();
+    }
+
     let dist1 = point_triangle_plane_distance(player_shape.capsule0, triangle);
     let dist2 = point_triangle_plane_distance(player_shape.capsule1, triangle);
 
@@ -120,7 +131,7 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3
 
     if closer_dist_to_plane > player_shape.radius {
         // Away from the triangle plane
-        return Vector3::<f32>::zero();
+        return Vector3::zero();
     }
 
     let point_on_plane = project_point_on_triangle_plane(closer_point, triangle);
