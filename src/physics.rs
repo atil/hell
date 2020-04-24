@@ -23,6 +23,13 @@ impl PlayerShape {
         }
     }
 
+    pub fn displace(&mut self, displacement: Vector3<f32>) {
+        self.capsule0 += displacement;
+        self.capsule1 += displacement;
+        self.tip0 += displacement;
+        self.tip1 += displacement;
+    }
+
     #[cfg(test)]
     pub fn with_capsule_points(c0: Point3<f32>, c1: Point3<f32>, radius: f32) -> PlayerShape {
         PlayerShape {
@@ -46,12 +53,13 @@ impl std::fmt::Display for PlayerShape {
 }
 
 pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bool) {
-    let player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
+    let mut player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
 
     let mut total_displacement = Vector3::<f32>::zero();
     for obj in objects {
         for tri in &obj.triangles {
             let penet = compute_penetration(player_shape, *tri);
+            player_shape.displace(penet);
             total_displacement += penet;
         }
     }
