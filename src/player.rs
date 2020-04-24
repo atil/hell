@@ -19,15 +19,17 @@ pub struct Player {
     position: Point3<f32>,
     forward: Point3<f32>,
     is_grounded: bool,
+    ground_normal: Vector3<f32>,
 }
 
 impl Player {
     pub fn new() -> Player {
         Player {
-            velocity: Vector3::<f32>::zero(),
+            velocity: Vector3::zero(),
             position: Point3::new(0.0, 20.0, 0.0),
             forward: Point3::new(0.0, 0.0, -1.0),
             is_grounded: false,
+            ground_normal: Vector3::zero(),
         }
     }
 
@@ -45,7 +47,9 @@ impl Player {
             // Ground move
             accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
             apply_friction(&mut self.velocity, dt);
-            self.velocity.y = 0.0;
+
+            self.velocity = project_vector_on_plane(self.velocity, self.ground_normal);
+
             if keys.get_key_down(Keycode::Space) {
                 self.velocity += Vector3::unit_y() * JUMP_FORCE;
             }
@@ -65,12 +69,14 @@ impl Player {
 
         self.position += self.velocity * dt;
 
-        let (displacement, is_grounded) = physics::step(&collision_objects, self.position);
+        let (displacement, is_grounded, ground_normal) =
+            physics::step(&collision_objects, self.position);
 
         self.velocity = project_vector_on_plane(self.velocity, displacement.normalize());
 
         self.position += displacement;
         self.is_grounded = is_grounded;
+        self.ground_normal = ground_normal;
     }
 
     pub fn get_view_matrix(&self) -> Matrix4<f32> {

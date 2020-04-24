@@ -52,7 +52,7 @@ impl std::fmt::Display for PlayerShape {
     }
 }
 
-pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bool) {
+pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bool, Vector3<f32>) {
     let mut player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
 
     let mut total_displacement = Vector3::<f32>::zero();
@@ -64,26 +64,29 @@ pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bo
         }
     }
 
-    let is_grounded = spherecast(objects, player_shape);
-    (total_displacement, is_grounded)
+    let (is_grounded, ground_normal) = spherecast(objects, player_shape);
+
+    (total_displacement, is_grounded, ground_normal)
 }
 
-fn spherecast(objects: &Vec<Object>, player_shape: PlayerShape) -> bool {
+fn spherecast(objects: &Vec<Object>, player_shape: PlayerShape) -> (bool, Vector3<f32>) {
     let p0 = player_shape.capsule0;
     let p1 = p0 - Vector3::unit_y() * 2.0;
 
     let mut hit_triangle = false;
+    let mut ground_normal = Vector3::zero();
     'all: for obj in objects {
         for tri in &obj.triangles {
             let dist = line_segment_triangle_distance(p0, p1, *tri);
             if dist < 0.1 {
                 hit_triangle = true;
+                ground_normal = tri.normal;
                 break 'all;
             }
         }
     }
 
-    hit_triangle
+    (hit_triangle, ground_normal)
 }
 
 fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3<f32> {
