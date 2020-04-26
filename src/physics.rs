@@ -77,9 +77,6 @@ pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bo
 }
 
 fn spherecast(objects: &Vec<Object>, player_shape: PlayerShape) -> (bool, Vector3<f32>) {
-    // let p0 = player_shape.capsule1;
-    // let p1 = player_shape.capsule1 - Vector3::unit_y() * 0.5;
-
     let p = player_shape.capsule1;
     let d = -Vector3::unit_y();
 
@@ -94,12 +91,6 @@ fn spherecast(objects: &Vec<Object>, player_shape: PlayerShape) -> (bool, Vector
                     break 'all;
                 }
             }
-            // let dist = line_segment_triangle_distance(p0, p1, *tri);
-            // if dist < 0.1 {
-            //     hit_triangle = true;
-            //     ground_normal = tri.normal;
-            //     break 'all;
-            // }
         }
     }
 
