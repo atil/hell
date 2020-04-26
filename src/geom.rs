@@ -1,6 +1,5 @@
 use crate::math::*;
 use cgmath::*;
-use std::cmp::Ordering;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Triangle {
@@ -116,47 +115,27 @@ pub fn get_closest_point_on_line_segment(
     }
 }
 
-pub fn line_segment_triangle_distance(p0: Point3<f32>, p1: Point3<f32>, triangle: Triangle) -> f32 {
-    // TODO: This is used only for distance comparison
-    // Therefore it's fine to use sqrmagnitude here
-    let dist1 = point_triangle_plane_distance(p0, triangle);
-    let dist2 = point_triangle_plane_distance(p1, triangle);
-
-    let (closer_point, closer_distance) = match dist1.partial_cmp(&dist2) {
-        Some(Ordering::Less) => (p0, dist1),
-        Some(Ordering::Greater) => (p1, dist2),
-        Some(Ordering::Equal) => (p0 + (p1 - p0) * 0.5, dist1),
-        None => panic!(format!(
-            "Invalid line-segment / point comparison {} and {}",
-            dist1, dist2
-        )),
-    };
-
-    let is_line_segment_crossing_plane =
-        point_triangle_plane_side(p0, triangle) != point_triangle_plane_side(p1, triangle);
-
-    let point_on_plane = project_point_on_triangle_plane(closer_point, triangle);
-
-    if is_point_in_triangle(point_on_plane, triangle) {
-        if is_line_segment_crossing_plane {
-            return 0.0; // Inside triangle
-        } else {
-            return closer_distance; // Directly above / below the triangle
-        }
+pub fn ray_triangle_check(
+    ray_orig: Point3<f32>,
+    ray_dir: Vector3<f32>,
+    triangle: Triangle,
+) -> Option<f32> {
+    if approx(Vector3::dot(ray_dir, triangle.normal), 0.0) {
+        return None; // Parallel
     }
 
-    let (_, d1) = get_closest_point_on_line_segment(point_on_plane, triangle.p0, triangle.p1);
-    let (_, d2) = get_closest_point_on_line_segment(point_on_plane, triangle.p1, triangle.p2);
-    let (_, d3) = get_closest_point_on_line_segment(point_on_plane, triangle.p2, triangle.p0);
+    let t = Vector3::dot(triangle.p0 - ray_orig, triangle.normal)
+        / Vector3::dot(ray_dir, triangle.normal);
 
-    let distance_on_plane = d1.min(d2.min(d3));
-    if is_line_segment_crossing_plane {
-        // Line segment crosses the triangle plane
-        // Distance vector is on the plane
-        return distance_on_plane;
+    if t < 0.0 {
+        return None; // Behind the ray
     }
 
-    (distance_on_plane * distance_on_plane + closer_distance * closer_distance).sqrt()
+    if is_point_in_triangle(ray_orig + t * ray_dir, triangle) {
+        Some(t)
+    } else {
+        None
+    }
 }
 
 pub fn midpoint(p0: Point3<f32>, p1: Point3<f32>) -> Point3<f32> {
