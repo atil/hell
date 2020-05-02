@@ -1,4 +1,5 @@
 use crate::object::Object;
+use crate::ui::Ui;
 use cgmath::*;
 use gl::types::*;
 
@@ -7,42 +8,56 @@ struct Screen {
     y: u32,
 }
 
-const SCREEN_SIZE: Screen = Screen { x: 800, y: 600 };
-
-pub fn init(sdl_context: &sdl2::Sdl) -> (sdl2::video::Window, sdl2::video::GLContext) {
-    let sdl_video = sdl_context.video().unwrap();
-    let gl_attr = sdl_video.gl_attr();
-    gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
-    gl_attr.set_context_version(4, 1);
-    let window = sdl_video
-        .window("Progress.", SCREEN_SIZE.x, SCREEN_SIZE.y)
-        .opengl()
-        .resizable()
-        .build()
-        .unwrap();
-    sdl_context.mouse().set_relative_mouse_mode(true);
-    let gl_context = window.gl_create_context().unwrap();
-    let _gl = gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
-
-    unsafe {
-        gl::Enable(gl::DEPTH_TEST);
-        gl::Viewport(0, 0, SCREEN_SIZE.x as GLint, SCREEN_SIZE.y as GLint);
-        gl::ClearColor(0.5, 0.3, 0.3, 1.0);
-    }
-
-    (window, gl_context)
+pub struct Renderer {
+    window: sdl2::video::Window,
+    gl_context: sdl2::video::GLContext,
+    ui: Ui,
 }
 
-pub fn render(window: &sdl2::video::Window, objects: &Vec<Object>, view_matrix: Matrix4<f32>) {
-    unsafe {
-        gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+const SCREEN_SIZE: Screen = Screen { x: 800, y: 600 };
+
+impl Renderer {
+    pub fn init(sdl_context: &sdl2::Sdl) -> Self {
+        let sdl_video = sdl_context.video().unwrap();
+        let gl_attr = sdl_video.gl_attr();
+        gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
+        gl_attr.set_context_version(4, 1);
+        let window = sdl_video
+            .window("Progress.", SCREEN_SIZE.x, SCREEN_SIZE.y)
+            .opengl()
+            .resizable()
+            .build()
+            .unwrap();
+        sdl_context.mouse().set_relative_mouse_mode(true);
+        let gl_context = window.gl_create_context().unwrap();
+        gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
+
+        unsafe {
+            gl::Enable(gl::DEPTH_TEST);
+            gl::Viewport(0, 0, SCREEN_SIZE.x as GLint, SCREEN_SIZE.y as GLint);
+            gl::ClearColor(0.5, 0.3, 0.3, 1.0);
+        }
+
+        Self {
+            window: window,
+            gl_context: gl_context,
+            ui: Ui::init(),
+        }
     }
 
-    for obj in objects {
-        obj.draw(view_matrix);
-    }
+    pub fn render(&mut self, objects: &Vec<Object>, view_matrix: Matrix4<f32>) {
+        unsafe {
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        }
 
-    window.gl_swap_window();
+        for obj in objects {
+            obj.draw(view_matrix);
+        }
+
+        self.ui.draw();
+
+        self.window.gl_swap_window();
+    }
 }
 
 pub fn get_projection_matrix() -> Matrix4<f32> {
@@ -52,4 +67,11 @@ pub fn get_projection_matrix() -> Matrix4<f32> {
         0.1,
         1000.0,
     )
+}
+
+mod tests {
+    #[test]
+    fn my_test() {
+        assert_eq!(1 + 1, 2);
+    }
 }

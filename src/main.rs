@@ -18,13 +18,14 @@ mod player;
 mod render;
 mod shader;
 mod time;
+mod ui;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
 
     // This GLContext needs to be alive. Renaming it to "_" makes the compiler
     // drop it immediately
-    let (window, _gl_context) = render::init(&sdl_context);
+    let mut renderer = render::Renderer::init(&sdl_context);
 
     let mut time = time::Time::new(&sdl_context);
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -83,6 +84,6 @@ fn main() {
 
         player.tick(&keys, (mouse_x, mouse_y), &objects, dt);
 
-        render::render(&window, &objects, player.get_view_matrix());
+        renderer.render(&objects, player.get_view_matrix());
     }
 }
