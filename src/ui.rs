@@ -1,6 +1,7 @@
 use crate::cgmath::SquareMatrix;
 use crate::shader::*;
 use cgmath::Matrix4;
+use cgmath::Vector2;
 use gl::types::*;
 use std::ffi::CString;
 
@@ -10,6 +11,35 @@ pub struct Ui {
     vao: GLuint,
     program: Program,
     index_data: Vec<u32>,
+}
+
+struct UiRect {
+    vertex_data: Vec<f32>,
+    index_data: Vec<u32>,
+}
+
+impl UiRect {
+    pub fn new(top: f32, left: f32, width: f32, height: f32) -> Self {
+        let p0 = Vector2::new(left, top - height);
+        let p1 = Vector2::new(left + width, top - height);
+        let p2 = Vector2::new(left + width, top);
+        let p3 = Vector2::new(left, top);
+
+        let vertex_data = vec![
+            p0.x, p0.y,
+            p1.x, p1.y,
+            p2.x, p2.y,
+
+            p0.x, p0.y,
+            p2.x, p2.y,
+            p3.x, p3.y,
+        ];
+
+        Self { 
+            vertex_data: vertex_data,
+            index_data: vec![0, 1, 2, 3, 4, 5]
+        }
+    }
 }
 
 impl Ui {
@@ -22,8 +52,11 @@ impl Ui {
 
         let shader_program = Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
-        let vertex_data: Vec<f32> = vec![-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0];
-        let index_data = vec![0, 1, 2];
+        let rekt_size = 0.01;
+        let rekt = UiRect::new(rekt_size / 2.0, -rekt_size / 2.0, rekt_size, rekt_size);
+
+        let vertex_data = rekt.vertex_data;
+        let index_data = rekt.index_data;
 
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;
@@ -57,10 +90,10 @@ impl Ui {
             gl::EnableVertexAttribArray(0);
             gl::VertexAttribPointer(
                 0,
-                3,
+                2,
                 gl::FLOAT,
                 gl::FALSE,
-                (3 * SIZEOF_FLOAT) as GLsizei,
+                (2 * SIZEOF_FLOAT) as GLsizei,
                 std::ptr::null(),
             );
 
