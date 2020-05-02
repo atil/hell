@@ -147,26 +147,27 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3
         // Since we're close to the plane, this case is a definite penetration
         (closer_tip_point - point_on_plane).magnitude() * triangle.normal
     } else {
-        // Projected point isn't in triangle. Return the vector to the closest point on triangle
-        let (p1, d1) = get_closest_point_on_line_segment(point_on_plane, triangle.p0, triangle.p1);
-        let (p2, d2) = get_closest_point_on_line_segment(point_on_plane, triangle.p1, triangle.p2);
-        let (p3, d3) = get_closest_point_on_line_segment(point_on_plane, triangle.p2, triangle.p0);
+        let (p, distance_to_triangle) = get_closest_point_on_triangle(point_on_plane, triangle);
 
-        let min_dist = d1.min(d2.min(d3));
-        if min_dist > player_shape.radius {
+        if distance_to_triangle > player_shape.radius {
             return Vector3::<f32>::zero();
         }
 
-        // TODO: This is wrong? Displacement should be towards a point on the capsule, not to
-        // the line segment. We should:
-        // closerpoint + (closerpoint - px).normalize() * radius
+        (point_on_plane - p).normalize() * (player_shape.radius - distance_to_triangle)
+    }
+}
 
-        match min_dist {
-            x if x == d1 => closer_point - p1,
-            x if x == d2 => closer_point - p2,
-            x if x == d3 => closer_point - p3,
-            _ => unreachable!(),
-        }
+fn get_closest_point_on_triangle(point: Point3<f32>, triangle: Triangle) -> (Point3<f32>, f32) {
+    let (p1, d1) = get_closest_point_on_line_segment(point, triangle.p0, triangle.p1);
+    let (p2, d2) = get_closest_point_on_line_segment(point, triangle.p1, triangle.p2);
+    let (p3, d3) = get_closest_point_on_line_segment(point, triangle.p2, triangle.p0);
+
+    let min_dist = d1.min(d2.min(d3));
+    match min_dist {
+        x if x == d1 => (p1, d1),
+        x if x == d2 => (p2, d2),
+        x if x == d3 => (p3, d3),
+        _ => unreachable!(),
     }
 }
 
@@ -279,6 +280,22 @@ mod tests {
         assert_eq!(
             compute_penetration(player_shape, tri),
             Vector3::new(0.19999981, 0.0, 0.0)
+        );
+    }
+
+    #[test]
+    fn test_resolve_7() {
+        let player_shape = setup_player_shape(19.67636, 1.0, -2.3507338);
+
+        let tri = Triangle::new(
+            Point3::new(20.0, 1.0, -10.0),
+            Point3::new(20.0, 1.0, 0.0),
+            Point3::new(30.0, 1.0, -10.0),
+        );
+
+        assert_eq!(
+            compute_penetration(player_shape, tri),
+            Vector3::new(-0.17635918, 0.0, 0.0)
         );
     }
 

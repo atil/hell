@@ -68,7 +68,6 @@ impl Player {
         }
 
         self.position += self.velocity * dt;
-
         let (displacement, is_grounded, ground_normal) =
             physics::step(&collision_objects, self.position);
 
