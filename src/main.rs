@@ -23,10 +23,7 @@ mod ui;
 fn main() {
     let sdl_context = sdl2::init().unwrap();
 
-    // This GLContext needs to be alive. Renaming it to "_" makes the compiler
-    // drop it immediately
     let mut renderer = render::Renderer::init(&sdl_context);
-
     let mut time = time::Time::new(&sdl_context);
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut keys = keys::Keys::new();

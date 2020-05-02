@@ -7,7 +7,7 @@ struct Screen {
     x: u32,
     y: u32,
 }
-
+#[allow(dead_code)] // The glContext needs to be kept alive, even though not being read
 pub struct Renderer {
     window: sdl2::video::Window,
     gl_context: sdl2::video::GLContext,
@@ -67,11 +67,4 @@ pub fn get_projection_matrix() -> Matrix4<f32> {
         0.1,
         1000.0,
     )
-}
-
-mod tests {
-    #[test]
-    fn my_test() {
-        assert_eq!(1 + 1, 2);
-    }
 }

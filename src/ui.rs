@@ -1,13 +1,9 @@
-use crate::cgmath::SquareMatrix;
 use crate::shader::*;
-use cgmath::Matrix4;
 use cgmath::Vector2;
 use gl::types::*;
 use std::ffi::CString;
 
 pub struct Ui {
-    vbo: GLuint,
-    ibo: GLuint,
     vao: GLuint,
     program: Program,
     index_data: Vec<u32>,
@@ -25,19 +21,15 @@ impl UiRect {
         let p2 = Vector2::new(left + width, top);
         let p3 = Vector2::new(left, top);
 
+        // Two triangles: 0/1/2 - 0/2/3
+        // Starting from bottom right, going ccw
         let vertex_data = vec![
-            p0.x, p0.y,
-            p1.x, p1.y,
-            p2.x, p2.y,
-
-            p0.x, p0.y,
-            p2.x, p2.y,
-            p3.x, p3.y,
+            p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, p0.x, p0.y, p2.x, p2.y, p3.x, p3.y,
         ];
 
-        Self { 
+        Self {
             vertex_data: vertex_data,
-            index_data: vec![0, 1, 2, 3, 4, 5]
+            index_data: vec![0, 1, 2, 3, 4, 5],
         }
     }
 }
@@ -52,7 +44,8 @@ impl Ui {
 
         let shader_program = Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
-        let rekt_size = 0.01;
+        // A small rectangle in the middle
+        let rekt_size = 0.01; // In clipspace (normalized screen) coordinates
         let rekt = UiRect::new(rekt_size / 2.0, -rekt_size / 2.0, rekt_size, rekt_size);
 
         let vertex_data = rekt.vertex_data;
@@ -100,15 +93,9 @@ impl Ui {
             // Unbinding
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
             gl::BindVertexArray(0);
-
-            let projection = cgmath::ortho(-100.0, 100.0, -100.0, 100.0, 100.0, -100.0);
-            // shader_program.set_matrix("projection", projection);
-            // shader_program.set_matrix("model", Matrix4::identity());
         }
 
         Self {
-            vbo: vbo,
-            ibo: ibo,
             vao: vao,
             program: shader_program,
             index_data: index_data,
