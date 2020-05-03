@@ -57,7 +57,11 @@ impl std::fmt::Display for PlayerShape {
     }
 }
 
-pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bool, Vector3<f32>) {
+pub fn step(
+    objects: &Vec<Object>,
+    player_pos: Point3<f32>,
+    player_forward: Point3<f32>,
+) -> (Vector3<f32>, bool, Vector3<f32>) {
     let mut player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
 
     let mut total_displacement = Vector3::zero();
@@ -71,20 +75,33 @@ pub fn step(objects: &Vec<Object>, player_pos: Point3<f32>) -> (Vector3<f32>, bo
         }
     }
 
-    let (is_grounded, ground_normal) = spherecast(objects, player_shape);
+    let (is_grounded, ground_normal) = grounded_check(objects, player_shape, player_forward);
 
     (total_displacement, is_grounded, ground_normal)
 }
 
-fn spherecast(objects: &Vec<Object>, player_shape: PlayerShape) -> (bool, Vector3<f32>) {
-    let p = player_shape.capsule1;
-    let d = -Vector3::unit_y();
+fn grounded_check(
+    objects: &Vec<Object>,
+    player_shape: PlayerShape,
+    player_forward: Point3<f32>,
+) -> (bool, Vector3<f32>) {
+    let ray_origin = player_shape.capsule1;
+    let ray_direction = -Vector3::unit_y();
+    let ghost_ray_origin = player_shape.capsule1 - EuclideanSpace::to_vec(player_forward);
 
     let mut hit_triangle = false;
     let mut ground_normal = Vector3::zero();
     'all: for obj in objects {
         for tri in &obj.triangles {
-            if let Some(t) = ray_triangle_check(p, d, *tri) {
+            if let Some(t) = ray_triangle_check(ray_origin, ray_direction, *tri) {
+                if t < 0.9 {
+                    hit_triangle = true;
+                    ground_normal = tri.normal;
+                    break 'all;
+                }
+            }
+
+            if let Some(t) = ray_triangle_check(ghost_ray_origin, ray_direction, *tri) {
                 if t < 0.9 {
                     hit_triangle = true;
                     ground_normal = tri.normal;

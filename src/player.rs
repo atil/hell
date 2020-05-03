@@ -69,7 +69,7 @@ impl Player {
 
         self.position += self.velocity * dt;
         let (displacement, is_grounded, ground_normal) =
-            physics::step(&collision_objects, self.position);
+            physics::step(&collision_objects, self.position, self.forward);
 
         self.velocity = project_vector_on_plane(self.velocity, displacement.normalize());
 
