@@ -121,6 +121,8 @@ impl Material {
             self.program.set_matrix("model", model);
             self.program.set_matrix("view", view);
 
+            gl::BindTexture(gl::TEXTURE_2D, self.texture);
+
             gl::BindVertexArray(self.vao);
             gl::DrawElements(
                 gl::TRIANGLES,

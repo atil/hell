@@ -1,6 +1,6 @@
 #version 330 core
 
-uniform sampler2D texture0;
+uniform sampler2D texture_ui;
 
 in VS_OUTPUT {
     vec2 TexCoord;
@@ -10,5 +10,5 @@ out vec4 Color;
 
 void main()
 {
-    Color = texture(texture0, IN.TexCoord);
+    Color = texture(texture_ui, IN.TexCoord);
 }

@@ -2,11 +2,13 @@ use crate::shader::*;
 use crate::texture;
 use cgmath::Vector2;
 use gl::types::*;
+use rusttype::{point, Font, Scale};
 use std::ffi::CString;
 
 pub struct Ui {
     vao: GLuint,
     program: Program,
+    texture: GLuint,
     index_data: Vec<u32>,
 }
 
@@ -37,6 +39,10 @@ impl UiRect {
 
 impl Ui {
     pub fn init() -> Self {
+        let font_data = include_bytes!("../assets/RobotoMono-Regular.ttf");
+        let font = Font::try_from_bytes(font_data as &[u8]).expect("Error constructing Font");
+        // let text = "This is RustType rendered into a png!";
+
         let vert_shader =
             Shader::from_vert_source(&CString::new(include_str!("ui.vert")).unwrap()).unwrap();
 
@@ -46,7 +52,7 @@ impl Ui {
         let shader_program = Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
         let rekt2 = UiRect::new(-0.1, -0.1, 0.1, 0.1);
-        let rekt3 = UiRect::new(-0.5, -0.4, 0.1, 0.1);
+        let rekt3 = UiRect::new(-0.9, -0.4, 0.1, 0.1);
 
         let rects = vec![rekt2, rekt3];
 
@@ -73,6 +79,7 @@ impl Ui {
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;
         let mut vao: GLuint = 0;
+        let mut texture: GLuint = 0;
 
         unsafe {
             gl::GenBuffers(1, &mut vbo);
@@ -119,9 +126,10 @@ impl Ui {
                 (2 * SIZEOF_FLOAT) as *const GLvoid,
             );
 
-            let texture = texture::load_from_file("assets/prototype.png");
+            texture = texture::load_from_file("assets/prototype.png");
+            // let texture = texture::create_from_text("YUP", 32.0, font);
 
-            shader_program.set_i32("texture0", texture as i32);
+            shader_program.set_i32("texture_ui", texture as i32);
 
             // Unbinding
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
@@ -131,6 +139,7 @@ impl Ui {
         Self {
             vao: vao,
             program: shader_program,
+            texture: texture,
             index_data: ui_index_data,
         }
     }
@@ -139,6 +148,7 @@ impl Ui {
         unsafe {
             self.program.set_used();
 
+            gl::BindTexture(gl::TEXTURE_2D, self.texture);
             gl::BindVertexArray(self.vao);
             gl::DrawElements(
                 gl::TRIANGLES,
