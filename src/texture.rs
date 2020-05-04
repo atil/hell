@@ -19,7 +19,7 @@ pub fn load_from_file(texture_path: &str) -> u32 {
         gl::TexImage2D(
             gl::TEXTURE_2D,
             0,
-            gl::RGB as i32,
+            gl::RGBA as i32,
             img.width() as i32,
             img.height() as i32,
             0,
@@ -34,7 +34,7 @@ pub fn load_from_file(texture_path: &str) -> u32 {
 
 pub fn create_from_text(content: &str, size: f32, font: Font) -> u32 {
     let scale = Scale::uniform(size);
-    let colour = (150, 0, 0);
+    let color = (255, 0, 255);
     let v_metrics = font.v_metrics(scale);
     let glyphs: Vec<_> = font
         .layout(content, scale, point(20.0, 20.0 + v_metrics.ascent))
@@ -59,7 +59,7 @@ pub fn create_from_text(content: &str, size: f32, font: Font) -> u32 {
                 img.put_pixel(
                     x + bounding_box.min.x as u32,
                     y + bounding_box.min.y as u32,
-                    Rgba([colour.0, colour.1, colour.2, (v * 255.0) as u8]),
+                    Rgba([color.0, color.1, color.2, (v * 255.0) as u8]),
                 )
             });
         }
@@ -74,14 +74,14 @@ pub fn create_from_text(content: &str, size: f32, font: Font) -> u32 {
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
 
-        // img = img.flipv();
+        img = image::imageops::flip_vertical(&img);
         let width = img.width();
         let height = img.height();
         let img_data = img.into_raw();
         gl::TexImage2D(
             gl::TEXTURE_2D,
             0,
-            gl::RGB as i32,
+            gl::RGBA as i32,
             width as i32,
             height as i32,
             0,

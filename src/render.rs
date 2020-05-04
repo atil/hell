@@ -34,6 +34,8 @@ impl Renderer {
 
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
+            gl::Enable(gl::BLEND);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             gl::Viewport(0, 0, SCREEN_SIZE.x as GLint, SCREEN_SIZE.y as GLint);
             gl::ClearColor(0.5, 0.3, 0.3, 1.0);
         }

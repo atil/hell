@@ -41,7 +41,6 @@ impl Ui {
     pub fn init() -> Self {
         let font_data = include_bytes!("../assets/RobotoMono-Regular.ttf");
         let font = Font::try_from_bytes(font_data as &[u8]).expect("Error constructing Font");
-        // let text = "This is RustType rendered into a png!";
 
         let vert_shader =
             Shader::from_vert_source(&CString::new(include_str!("ui.vert")).unwrap()).unwrap();
@@ -51,7 +50,7 @@ impl Ui {
 
         let shader_program = Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
-        let rekt2 = UiRect::new(-0.1, -0.1, 0.1, 0.1);
+        let rekt2 = UiRect::new(0.5, -0.5, 1.0, 1.0);
         let rekt3 = UiRect::new(-0.9, -0.4, 0.1, 0.1);
 
         let rects = vec![rekt2, rekt3];
@@ -126,8 +125,8 @@ impl Ui {
                 (2 * SIZEOF_FLOAT) as *const GLvoid,
             );
 
-            texture = texture::load_from_file("assets/prototype.png");
-            // let texture = texture::create_from_text("YUP", 32.0, font);
+            // texture = texture::load_from_file("assets/prototype.png");
+            texture = texture::create_from_text("NOPE", 32.0, font);
 
             shader_program.set_i32("texture_ui", texture as i32);
 
