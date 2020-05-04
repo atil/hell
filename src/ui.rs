@@ -1,7 +1,9 @@
 use crate::shader::*;
 use cgmath::Vector2;
 use gl::types::*;
+use image::GenericImageView;
 use std::ffi::CString;
+use std::path::Path;
 
 pub struct Ui {
     vao: GLuint,
@@ -21,15 +23,15 @@ impl UiRect {
         let p2 = Vector2::new(left + width, top);
         let p3 = Vector2::new(left, top);
 
-        // Two triangles: 0/1/2 - 0/2/3
-        // Starting from bottom right, going ccw
         let vertex_data = vec![
-            p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, p0.x, p0.y, p2.x, p2.y, p3.x, p3.y,
+            p0.x, p0.y, 0.0, 0.0, p1.x, p1.y, 1.0, 0.0, p2.x, p2.y, 1.0, 1.0, p3.x, p3.y, 0.0, 1.0,
         ];
 
+        // Two triangles: 0/1/2 - 0/2/3
+        // Starting from bottom right, going ccw
         Self {
             vertex_data: vertex_data,
-            index_data: vec![0, 1, 2, 3, 4, 5],
+            index_data: vec![0, 1, 2, 0, 2, 3],
         }
     }
 }
@@ -44,16 +46,38 @@ impl Ui {
 
         let shader_program = Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
-        // A small rectangle in the middle
-        let rekt_size = 0.01; // In clipspace (normalized screen) coordinates
-        let rekt = UiRect::new(rekt_size / 2.0, -rekt_size / 2.0, rekt_size, rekt_size);
+        let rekt2 = UiRect::new(-0.1, -0.1, 0.1, 0.1);
+        let rekt3 = UiRect::new(-0.5, -0.4, 0.1, 0.1);
 
-        let vertex_data = rekt.vertex_data;
-        let index_data = rekt.index_data;
+        let rects = vec![rekt2, rekt3];
+
+        let ui_vertex_data = rects.iter().fold(Vec::new(), |mut all, r| {
+            all.extend_from_slice(r.vertex_data.as_slice());
+            all
+        });
+
+        let ui_index_data = rects
+            .iter()
+            .fold((Vec::new(), 0), |(mut all, mut offset), r| {
+                all.extend_from_slice(
+                    r.index_data
+                        .iter()
+                        .map(|index| index + offset)
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                );
+                offset += 4;
+                (all, offset)
+            })
+            .0;
+
+        let vertex_data = ui_vertex_data;
+        let index_data = ui_index_data;
 
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;
         let mut vao: GLuint = 0;
+        let mut texture = 0;
 
         unsafe {
             gl::GenBuffers(1, &mut vbo);
@@ -86,9 +110,44 @@ impl Ui {
                 2,
                 gl::FLOAT,
                 gl::FALSE,
-                (2 * SIZEOF_FLOAT) as GLsizei,
+                (4 * SIZEOF_FLOAT) as GLsizei,
                 std::ptr::null(),
             );
+
+            gl::EnableVertexAttribArray(1);
+            gl::VertexAttribPointer(
+                1,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                (4 * SIZEOF_FLOAT) as GLsizei,
+                (2 * SIZEOF_FLOAT) as *const GLvoid,
+            );
+
+            gl::GenTextures(1, &mut texture);
+            gl::BindTexture(gl::TEXTURE_2D, texture);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+
+            let texture_path = "assets/prototype.png";
+            let img = image::open(&Path::new(&texture_path)).unwrap();
+            let img = img.flipv();
+            let img_data = img.raw_pixels();
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::RGB as i32,
+                img.width() as i32,
+                img.height() as i32,
+                0,
+                gl::RGBA,
+                gl::UNSIGNED_BYTE,
+                &img_data[0] as *const u8 as *const GLvoid,
+            );
+            gl::GenerateMipmap(gl::TEXTURE_2D);
+            shader_program.set_i32("texture0", texture as i32);
 
             // Unbinding
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);

@@ -1,7 +1,14 @@
 #version 330 core
-out vec4 color;
+
+uniform sampler2D texture0;
+
+in VS_OUTPUT {
+    vec2 TexCoord;
+} IN;
+
+out vec4 Color;
 
 void main()
-{    
-    color = vec4(1.0, 0.0, 0.0, 1.0);
-}  
+{
+    Color = texture(texture0, IN.TexCoord);
+}
