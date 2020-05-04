@@ -1,10 +1,9 @@
 extern crate tobj;
 use crate::shader::*;
+use crate::texture;
 use cgmath::Matrix4;
 use gl::types::*;
-use image::GenericImageView;
 use std::ffi::CString;
-use std::path::Path;
 
 pub struct Material {
     vbo: GLuint,
@@ -35,7 +34,7 @@ impl Material {
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;
         let mut vao: GLuint = 0;
-        let mut texture = 0;
+        let mut texture: GLuint = 0;
 
         unsafe {
             gl::GenBuffers(1, &mut vbo);
@@ -94,29 +93,9 @@ impl Material {
                 (5 * SIZEOF_FLOAT) as *const GLvoid,
             );
 
-            gl::GenTextures(1, &mut texture);
-            gl::BindTexture(gl::TEXTURE_2D, texture);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-
-            let texture_path = format!("assets/{}", tobj_mat.diffuse_texture.as_str());
-            let img = image::open(&Path::new(&texture_path)).unwrap();
-            let img = img.flipv();
-            let img_data = img.raw_pixels();
-            gl::TexImage2D(
-                gl::TEXTURE_2D,
-                0,
-                gl::RGB as i32,
-                img.width() as i32,
-                img.height() as i32,
-                0,
-                gl::RGBA,
-                gl::UNSIGNED_BYTE,
-                &img_data[0] as *const u8 as *const GLvoid,
+            texture = texture::load_from_file(
+                format!("assets/{}", tobj_mat.diffuse_texture.as_str()).as_str(),
             );
-            gl::GenerateMipmap(gl::TEXTURE_2D);
             shader_program.set_i32("texture0", texture as i32);
 
             // Unbinding

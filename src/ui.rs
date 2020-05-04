@@ -1,9 +1,8 @@
 use crate::shader::*;
+use crate::texture;
 use cgmath::Vector2;
 use gl::types::*;
-use image::GenericImageView;
 use std::ffi::CString;
-use std::path::Path;
 
 pub struct Ui {
     vao: GLuint,
@@ -71,13 +70,9 @@ impl Ui {
             })
             .0;
 
-        let vertex_data = ui_vertex_data;
-        let index_data = ui_index_data;
-
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;
         let mut vao: GLuint = 0;
-        let mut texture = 0;
 
         unsafe {
             gl::GenBuffers(1, &mut vbo);
@@ -88,16 +83,16 @@ impl Ui {
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (vertex_data.len() * SIZEOF_FLOAT) as GLsizeiptr,
-                vertex_data.as_ptr() as *const GLvoid,
+                (ui_vertex_data.len() * SIZEOF_FLOAT) as GLsizeiptr,
+                ui_vertex_data.as_ptr() as *const GLvoid,
                 gl::STATIC_DRAW,
             );
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
             gl::BufferData(
                 gl::ELEMENT_ARRAY_BUFFER,
-                (index_data.len() * SIZEOF_FLOAT) as GLsizeiptr,
-                index_data.as_ptr() as *const GLvoid,
+                (ui_index_data.len() * SIZEOF_FLOAT) as GLsizeiptr,
+                ui_index_data.as_ptr() as *const GLvoid,
                 gl::STATIC_DRAW,
             );
             gl::BindVertexArray(vao);
@@ -124,29 +119,8 @@ impl Ui {
                 (2 * SIZEOF_FLOAT) as *const GLvoid,
             );
 
-            gl::GenTextures(1, &mut texture);
-            gl::BindTexture(gl::TEXTURE_2D, texture);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+            let texture = texture::load_from_file("assets/prototype.png");
 
-            let texture_path = "assets/prototype.png";
-            let img = image::open(&Path::new(&texture_path)).unwrap();
-            let img = img.flipv();
-            let img_data = img.raw_pixels();
-            gl::TexImage2D(
-                gl::TEXTURE_2D,
-                0,
-                gl::RGB as i32,
-                img.width() as i32,
-                img.height() as i32,
-                0,
-                gl::RGBA,
-                gl::UNSIGNED_BYTE,
-                &img_data[0] as *const u8 as *const GLvoid,
-            );
-            gl::GenerateMipmap(gl::TEXTURE_2D);
             shader_program.set_i32("texture0", texture as i32);
 
             // Unbinding
@@ -157,7 +131,7 @@ impl Ui {
         Self {
             vao: vao,
             program: shader_program,
-            index_data: index_data,
+            index_data: ui_index_data,
         }
     }
 
