@@ -50,13 +50,13 @@ impl Renderer {
     pub fn render(&mut self, objects: &Vec<Object>, view_matrix: Matrix4<f32>) {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-        }
 
-        for obj in objects {
-            obj.draw(view_matrix);
-        }
+            for obj in objects {
+                obj.draw(view_matrix);
+            }
 
-        self.ui.draw();
+            self.ui.draw();
+        }
 
         self.window.gl_swap_window();
     }

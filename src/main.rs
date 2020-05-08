@@ -20,6 +20,7 @@ mod shader;
 mod texture;
 mod time;
 mod ui;
+mod ui_batch;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();

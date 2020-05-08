@@ -36,7 +36,7 @@ impl<'a> Object<'a> {
         }
     }
 
-    pub fn draw(&self, view_matrix: Matrix4<f32>) {
+    pub unsafe fn draw(&self, view_matrix: Matrix4<f32>) {
         self.material.draw(self.transform, view_matrix);
     }
 }

@@ -34,7 +34,7 @@ impl Material {
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;
         let mut vao: GLuint = 0;
-        let mut texture: GLuint = 0;
+        let texture: GLuint;
 
         unsafe {
             gl::GenBuffers(1, &mut vbo);
@@ -115,22 +115,20 @@ impl Material {
         }
     }
 
-    pub fn draw(&self, model: Matrix4<f32>, view: Matrix4<f32>) {
-        unsafe {
-            self.program.set_used();
-            self.program.set_matrix("model", model);
-            self.program.set_matrix("view", view);
+    pub unsafe fn draw(&self, model: Matrix4<f32>, view: Matrix4<f32>) {
+        self.program.set_used();
+        self.program.set_matrix("model", model);
+        self.program.set_matrix("view", view);
 
-            gl::BindTexture(gl::TEXTURE_2D, self.texture);
+        gl::BindTexture(gl::TEXTURE_2D, self.texture);
 
-            gl::BindVertexArray(self.vao);
-            gl::DrawElements(
-                gl::TRIANGLES,
-                self.index_data.len() as i32,
-                gl::UNSIGNED_INT,
-                self.index_data.as_ptr() as *const std::os::raw::c_void,
-            );
-        }
+        gl::BindVertexArray(self.vao);
+        gl::DrawElements(
+            gl::TRIANGLES,
+            self.index_data.len() as i32,
+            gl::UNSIGNED_INT,
+            self.index_data.as_ptr() as *const std::os::raw::c_void,
+        );
     }
 }
 
