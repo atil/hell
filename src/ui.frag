@@ -1,6 +1,6 @@
-#version 330 core
+#version 420
 
-uniform sampler2D texture_ui;
+layout(binding=0) uniform sampler2D texture_ui;
 
 in VS_OUTPUT {
     vec2 TexCoord;
