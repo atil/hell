@@ -156,8 +156,8 @@ pub fn project_vector_on_plane(v: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32>
     )
 }
 
-pub fn horz(v: &Vector3<f32>) -> Vector3<f32> {
-    Vector3::new(v.x, 0.0, v.z)
+pub fn horz_norm(v: &Vector3<f32>) -> Vector3<f32> {
+    Vector3::new(v.x, 0.0, v.z).normalize()
 }
 
 #[cfg(test)]

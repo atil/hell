@@ -42,7 +42,7 @@ impl Player {
     ) {
         mouse_look(&mut self.forward, mouse);
 
-        let wish_dir = get_wish_dir(&keys, horz(&self.forward));
+        let wish_dir = get_wish_dir(&keys, horz_norm(&self.forward));
         if self.is_grounded {
             // Ground move
             accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
