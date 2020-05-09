@@ -17,7 +17,7 @@ const JUMP_FORCE: f32 = 0.01;
 pub struct Player {
     velocity: Vector3<f32>,
     position: Point3<f32>,
-    forward: Point3<f32>,
+    forward: Vector3<f32>,
     is_grounded: bool,
     ground_normal: Vector3<f32>,
 }
@@ -27,7 +27,7 @@ impl Player {
         Player {
             velocity: Vector3::zero(),
             position: Point3::new(0.0, 20.0, 0.0),
-            forward: Point3::new(0.0, 0.0, -1.0),
+            forward: Vector3::new(0.0, 0.0, -1.0),
             is_grounded: false,
             ground_normal: Vector3::zero(),
         }
@@ -42,7 +42,7 @@ impl Player {
     ) {
         mouse_look(&mut self.forward, mouse);
 
-        let wish_dir = get_wish_dir(&keys, self.forward);
+        let wish_dir = get_wish_dir(&keys, horz(&self.forward));
         if self.is_grounded {
             // Ground move
             accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
@@ -51,6 +51,7 @@ impl Player {
             self.velocity = project_vector_on_plane(self.velocity, self.ground_normal);
 
             if keys.get_key_down(Keycode::Space) {
+                // TODO: Add a fraction of horizontal velocity to the jump direction
                 self.velocity += Vector3::unit_y() * JUMP_FORCE;
             }
         } else {
@@ -68,8 +69,13 @@ impl Player {
         }
 
         self.position += self.velocity * dt;
+
+        let mut velocity_dir_horz = self.velocity;
+        velocity_dir_horz.y = 0.0;
+        velocity_dir_horz = velocity_dir_horz.normalize();
+
         let (displacement, is_grounded, ground_normal) =
-            physics::step(&collision_objects, self.position, self.forward);
+            physics::step(&collision_objects, self.position, velocity_dir_horz);
 
         self.velocity = project_vector_on_plane(self.velocity, displacement.normalize());
 
@@ -81,34 +87,34 @@ impl Player {
     pub fn get_view_matrix(&self) -> Matrix4<f32> {
         Matrix4::look_at(
             self.position,
-            self.position + EuclideanSpace::to_vec(self.forward),
-            vec3(0.0, 1.0, 0.0), // Always up
+            self.position + self.forward,
+            vec3(0.0, 1.0, 0.0),
         )
     }
 }
 
-fn mouse_look(forward: &mut Point3<f32>, mouse: (f32, f32)) {
+fn mouse_look(forward: &mut Vector3<f32>, mouse: (f32, f32)) {
     let (mouse_x, mouse_y) = mouse;
 
     let horz_rot = Quaternion::from_axis_angle(Vector3::unit_y(), Rad(-mouse_x) * SENSITIVITY);
-    *forward = horz_rot.rotate_point(*forward);
+    *forward = horz_rot.rotate_vector(*forward);
 
-    let left = EuclideanSpace::to_vec(*forward).cross(Vector3::unit_y());
+    let left = forward.cross(Vector3::unit_y());
     *forward =
-        Quaternion::from_axis_angle(left, Rad(-mouse_y) * SENSITIVITY).rotate_point(*forward);
+        Quaternion::from_axis_angle(left, Rad(-mouse_y) * SENSITIVITY).rotate_vector(*forward);
 }
 
-fn get_wish_dir(keys: &Keys, forward: Point3<f32>) -> Vector3<f32> {
+fn get_wish_dir(keys: &Keys, forward: Vector3<f32>) -> Vector3<f32> {
     let mut vec = Vector3::<f32>::zero();
     if keys.get_key(Keycode::W) {
-        vec += cgmath::EuclideanSpace::to_vec(forward)
+        vec += forward
     } else if keys.get_key(Keycode::S) {
-        vec -= cgmath::EuclideanSpace::to_vec(forward)
+        vec -= forward
     }
     if keys.get_key(Keycode::A) {
-        vec -= cgmath::EuclideanSpace::to_vec(forward).cross(Vector3::unit_y())
+        vec -= forward.cross(Vector3::unit_y())
     } else if keys.get_key(Keycode::D) {
-        vec += cgmath::EuclideanSpace::to_vec(forward).cross(Vector3::unit_y())
+        vec += forward.cross(Vector3::unit_y())
     }
 
     vec

@@ -21,12 +21,12 @@ impl Ui {
             Shader::from_frag_source(&CString::new(include_str!("ui.frag")).unwrap()).unwrap();
 
         let texture1 = texture::load_from_file("assets/prototype.png");
-        let texture2 = texture::create_from_text("NOPE", 32.0, font);
+        let texture2 = texture::create_from_text("Progress", 32.0, font);
 
         let program = Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
-        let rekt1 = Rect::new(0.5, -0.5, 1.0, 1.0);
-        let rekt2 = Rect::new(-0.9, -0.4, 0.1, 0.1);
+        let rekt1 = Rect::new(0.01, -0.01, 0.02, 0.02);
+        let rekt2 = Rect::new(-0.9, -0.4, 0.2, 0.1);
 
         let batches = vec![
             Batch::new(vec![rekt1], texture1),

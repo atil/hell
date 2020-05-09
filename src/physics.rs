@@ -60,7 +60,7 @@ impl std::fmt::Display for PlayerShape {
 pub fn step(
     objects: &Vec<Object>,
     player_pos: Point3<f32>,
-    player_forward: Point3<f32>,
+    player_move_dir_horz: Vector3<f32>,
 ) -> (Vector3<f32>, bool, Vector3<f32>) {
     let mut player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
 
@@ -75,7 +75,7 @@ pub fn step(
         }
     }
 
-    let (is_grounded, ground_normal) = grounded_check(objects, player_shape, player_forward);
+    let (is_grounded, ground_normal) = grounded_check(objects, player_shape, player_move_dir_horz);
 
     (total_displacement, is_grounded, ground_normal)
 }
@@ -83,11 +83,11 @@ pub fn step(
 fn grounded_check(
     objects: &Vec<Object>,
     player_shape: PlayerShape,
-    player_forward: Point3<f32>,
+    player_move_dir_horz: Vector3<f32>,
 ) -> (bool, Vector3<f32>) {
     let ray_origin = player_shape.capsule1;
     let ray_direction = -Vector3::unit_y();
-    let ghost_ray_origin = player_shape.capsule1 - EuclideanSpace::to_vec(player_forward);
+    let ghost_ray_origin = player_shape.capsule1 - player_move_dir_horz;
 
     let mut hit_triangle = false;
     let mut ground_normal = Vector3::zero();
