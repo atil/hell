@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate cgmath;
 extern crate gl;
 extern crate sdl2;
