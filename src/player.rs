@@ -20,6 +20,7 @@ pub struct Player {
     forward: Vector3<f32>,
     is_grounded: bool,
     ground_normal: Vector3<f32>,
+    gonna_jump: bool,
 }
 
 impl Player {
@@ -30,6 +31,7 @@ impl Player {
             forward: Vector3::new(0.0, 0.0, -1.0),
             is_grounded: false,
             ground_normal: Vector3::zero(),
+            gonna_jump: false,
         }
     }
 
@@ -41,6 +43,11 @@ impl Player {
         dt: f32,
     ) {
         mouse_look(&mut self.forward, mouse);
+        if keys.get_key_down(Keycode::Space) {
+            self.gonna_jump = true;
+        } else if keys.get_key_up(Keycode::Space) {
+            self.gonna_jump = false;
+        }
 
         let wish_dir = get_wish_dir(
             &keys,
@@ -54,7 +61,7 @@ impl Player {
 
             self.velocity = project_vector_on_plane(self.velocity, self.ground_normal);
 
-            if keys.get_key_down(Keycode::Space) {
+            if self.gonna_jump {
                 // TODO: Add a fraction of horizontal velocity to the jump direction
                 self.velocity += Vector3::unit_y() * JUMP_FORCE;
             }
