@@ -62,16 +62,26 @@ pub fn step(
     player_pos: Point3<f32>,
     player_move_dir_horz: Vector3<f32>,
 ) -> (Vector3<f32>, bool, Vector3<f32>) {
-    let mut player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
+    // println!("{:?}", player_pos);
 
+    let mut player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
     let mut total_displacement = Vector3::zero();
     for obj in objects {
         for tri in &obj.triangles {
-            let penet = compute_penetration(player_shape, *tri);
-            if penet.magnitude2() > 0.001 {
-                player_shape.displace(penet);
-                total_displacement += penet;
+            let mut penet = compute_penetration(player_shape, *tri);
+            if penet.magnitude2() < 0.001 {
+                continue;
             }
+
+            // Give an extra push to the vertical displacement
+            // If the capsule's bottom tip is perfectly aligned with the ground,
+            // then it collides with ground triangles
+            if penet.y > 0.0 {
+                penet.y += 0.01 * penet.y.signum();
+            }
+
+            player_shape.displace(penet);
+            total_displacement += penet;
         }
     }
 
@@ -87,22 +97,15 @@ fn grounded_check(
 ) -> (bool, Vector3<f32>) {
     let ray_origin = player_shape.capsule1;
     let ray_direction = -Vector3::unit_y();
-    let ghost_ray_origin = player_shape.capsule1 - player_move_dir_horz;
+    let _ghost_ray_origin = player_shape.capsule1 - player_move_dir_horz;
 
     let mut hit_triangle = false;
     let mut ground_normal = Vector3::zero();
     'all: for obj in objects {
         for tri in &obj.triangles {
             if let Some(t) = ray_triangle_check(ray_origin, ray_direction, *tri) {
-                if t < 0.9 {
-                    hit_triangle = true;
-                    ground_normal = tri.normal;
-                    break 'all;
-                }
-            }
-
-            if let Some(t) = ray_triangle_check(ghost_ray_origin, ray_direction, *tri) {
-                if t < 0.9 {
+                // TODO: Remove the magic number
+                if t < 0.51 {
                     hit_triangle = true;
                     ground_normal = tri.normal;
                     break 'all;
@@ -340,6 +343,22 @@ mod tests {
             Point3::new(1.0, 1.25, 0.0),
             Point3::new(0.0, 1.25, -1.0),
             Point3::new(-1.0, 1.25, 0.0),
+        );
+
+        assert_eq!(
+            compute_penetration(player_shape, tri),
+            Vector3::new(0.0, 0.0, 0.0)
+        );
+    }
+
+    #[test]
+    fn test_resolve_no_collision_with_floor() {
+        let player_shape = setup_player_shape(-0.5, 1.01, -9.67);
+
+        let tri = Triangle::new(
+            Point3::new(-10.0, 0.0, -10.0),
+            Point3::new(0.0, 0.0, -10.0),
+            Point3::new(-10.0, 0.0, -20.0),
         );
 
         assert_eq!(
