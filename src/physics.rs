@@ -62,8 +62,6 @@ pub fn step(
     player_pos: Point3<f32>,
     player_move_dir_horz: Vector3<f32>,
 ) -> (Vector3<f32>, bool, Vector3<f32>) {
-    // println!("{:?}", player_pos);
-
     let mut player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
     let mut total_displacement = Vector3::zero();
     for obj in objects {
@@ -75,12 +73,17 @@ pub fn step(
 
             // Give an extra push to the vertical displacement
             // If the capsule's bottom tip is perfectly aligned with the ground,
+            // (for example the ground is y == 0.0 hand the player is as y == 1.0)
             // then it collides with ground triangles
             if penet.y > 0.0 {
                 penet.y += 0.01 * penet.y.signum();
             }
 
+            // If more than one triangles is penetrating the capsule
+            // then don't compute penetrations from the same capsule position
+            // Triangles poke at the capsule one by one
             player_shape.displace(penet);
+
             total_displacement += penet;
         }
     }
