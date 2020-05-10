@@ -42,7 +42,11 @@ impl Player {
     ) {
         mouse_look(&mut self.forward, mouse);
 
-        let wish_dir = get_wish_dir(&keys, horz_norm(&self.forward).unwrap_or(Vector3::<f32>::zero()));
+        let wish_dir = get_wish_dir(
+            &keys,
+            horz_norm(&self.forward).unwrap_or(Vector3::<f32>::zero()),
+        );
+
         if self.is_grounded {
             // Ground move
             accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
@@ -72,8 +76,6 @@ impl Player {
 
         let (displacement, is_grounded, ground_normal) =
             physics::step(&collision_objects, self.position, &mut self.velocity);
-
-        // self.velocity = project_vector_on_plane(self.velocity, displacement.normalize());
 
         self.position += displacement;
         self.is_grounded = is_grounded;
@@ -113,7 +115,11 @@ fn get_wish_dir(keys: &Keys, forward: Vector3<f32>) -> Vector3<f32> {
         vec += forward.cross(Vector3::unit_y())
     }
 
-    vec
+    if vec.magnitude2() > 0.00001 {
+        vec.normalize()
+    } else {
+        vec // No input
+    }
 }
 
 fn accelerate(velocity: &mut Vector3<f32>, wish_dir: Vector3<f32>, accel_coeff: f32, dt: f32) {
