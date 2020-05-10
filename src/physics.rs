@@ -191,20 +191,6 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3
     }
 }
 
-fn get_closest_point_on_triangle(point: Point3<f32>, triangle: Triangle) -> (Point3<f32>, f32) {
-    let (p1, d1) = get_closest_point_on_line_segment(point, triangle.p0, triangle.p1);
-    let (p2, d2) = get_closest_point_on_line_segment(point, triangle.p1, triangle.p2);
-    let (p3, d3) = get_closest_point_on_line_segment(point, triangle.p2, triangle.p0);
-
-    let min_dist = d1.min(d2.min(d3));
-    match min_dist {
-        x if x == d1 => (p1, d1),
-        x if x == d2 => (p2, d2),
-        x if x == d3 => (p3, d3),
-        _ => unreachable!(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

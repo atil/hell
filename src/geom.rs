@@ -138,6 +138,20 @@ pub fn ray_triangle_check(
     }
 }
 
+pub fn get_closest_point_on_triangle(point: Point3<f32>, triangle: Triangle) -> (Point3<f32>, f32) {
+    let (p1, d1) = get_closest_point_on_line_segment(point, triangle.p0, triangle.p1);
+    let (p2, d2) = get_closest_point_on_line_segment(point, triangle.p1, triangle.p2);
+    let (p3, d3) = get_closest_point_on_line_segment(point, triangle.p2, triangle.p0);
+
+    let min_dist = d1.min(d2.min(d3));
+    match min_dist {
+        x if x == d1 => (p1, d1),
+        x if x == d2 => (p2, d2),
+        x if x == d3 => (p3, d3),
+        _ => unreachable!(),
+    }
+}
+
 pub fn midpoint(p0: Point3<f32>, p1: Point3<f32>) -> Point3<f32> {
     p0 + (p1 - p0) * 0.5
 }
@@ -149,10 +163,12 @@ pub fn project_vector_on_plane(v: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32>
     }
     let dot = Vector3::dot(v, n);
 
+    let dot_over_sqr_mag = dot / sqr_mag;
+
     Vector3::new(
-        v.x - n.x * dot / sqr_mag,
-        v.y - n.y * dot / sqr_mag,
-        v.z - n.z * dot / sqr_mag,
+        v.x - n.x * dot_over_sqr_mag,
+        v.y - n.y * dot_over_sqr_mag,
+        v.z - n.z * dot_over_sqr_mag,
     )
 }
 
