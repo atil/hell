@@ -27,7 +27,7 @@ impl Player {
     pub fn new() -> Player {
         Player {
             velocity: Vector3::zero(),
-            position: Point3::new(0.0, 100.0, -2.0),
+            position: Point3::new(0.0, 20.0, -2.0),
             forward: Vector3::new(0.0, 0.0, -1.0),
             is_grounded: false,
             ground_normal: Vector3::zero(),
@@ -56,6 +56,8 @@ impl Player {
 
         if self.is_grounded {
             // Ground move
+            // NOTE: These two should swap places, according to the reference code
+            // But things go haywire in that case here. Don't know why
             accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
             apply_friction(&mut self.velocity, dt);
 
