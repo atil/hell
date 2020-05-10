@@ -26,7 +26,7 @@ impl Player {
     pub fn new() -> Player {
         Player {
             velocity: Vector3::zero(),
-            position: Point3::new(0.0, 20.0, 0.0),
+            position: Point3::new(0.0, 100.0, -2.0),
             forward: Vector3::new(0.0, 0.0, -1.0),
             is_grounded: false,
             ground_normal: Vector3::zero(),
@@ -42,7 +42,7 @@ impl Player {
     ) {
         mouse_look(&mut self.forward, mouse);
 
-        let wish_dir = get_wish_dir(&keys, horz_norm(&self.forward));
+        let wish_dir = get_wish_dir(&keys, horz_norm(&self.forward).unwrap_or(Vector3::<f32>::zero()));
         if self.is_grounded {
             // Ground move
             accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
@@ -70,14 +70,10 @@ impl Player {
 
         self.position += self.velocity * dt;
 
-        let mut velocity_dir_horz = self.velocity;
-        velocity_dir_horz.y = 0.0;
-        velocity_dir_horz = velocity_dir_horz.normalize();
-
         let (displacement, is_grounded, ground_normal) =
-            physics::step(&collision_objects, self.position, velocity_dir_horz);
+            physics::step(&collision_objects, self.position, &mut self.velocity);
 
-        self.velocity = project_vector_on_plane(self.velocity, displacement.normalize());
+        // self.velocity = project_vector_on_plane(self.velocity, displacement.normalize());
 
         self.position += displacement;
         self.is_grounded = is_grounded;

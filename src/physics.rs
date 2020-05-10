@@ -14,12 +14,13 @@ struct PlayerShape {
 
 impl PlayerShape {
     pub fn new(position: Point3<f32>, height: f32, radius: f32) -> PlayerShape {
+        let half_height = height / 2.0;
         PlayerShape {
-            capsule0: position + Vector3::new(0.0, height / 2.0, 0.0),
-            capsule1: position - Vector3::new(0.0, height / 2.0, 0.0),
+            capsule0: position + Vector3::new(0.0, half_height, 0.0),
+            capsule1: position - Vector3::new(0.0, half_height, 0.0),
             radius: radius,
-            tip0: position + Vector3::new(0.0, (height / 2.0) + radius, 0.0),
-            tip1: position - Vector3::new(0.0, (height / 2.0) + radius, 0.0),
+            tip0: position + Vector3::new(0.0, half_height + radius, 0.0),
+            tip1: position - Vector3::new(0.0, half_height + radius, 0.0),
         }
     }
 
@@ -60,14 +61,14 @@ impl std::fmt::Display for PlayerShape {
 pub fn step(
     objects: &Vec<Object>,
     player_pos: Point3<f32>,
-    player_move_dir_horz: Vector3<f32>,
+    player_velocity: &mut Vector3<f32>,
 ) -> (Vector3<f32>, bool, Vector3<f32>) {
     let mut player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
     let mut total_displacement = Vector3::zero();
     for obj in objects {
         for tri in &obj.triangles {
             let mut penet = compute_penetration(player_shape, *tri);
-            if penet.magnitude2() < 0.001 {
+            if penet.magnitude2() < 0.01 {
                 continue;
             }
 
@@ -84,11 +85,15 @@ pub fn step(
             // Triangles poke at the capsule one by one
             player_shape.displace(penet);
 
+            // Player will have no velocity in the penetration direction
+            *player_velocity = project_vector_on_plane(*player_velocity, penet.normalize());
+
             total_displacement += penet;
         }
     }
 
-    let (is_grounded, ground_normal) = grounded_check(objects, player_shape, player_move_dir_horz);
+    let (is_grounded, ground_normal) =
+        grounded_check(objects, player_shape, horz_norm(player_velocity));
 
     (total_displacement, is_grounded, ground_normal)
 }
@@ -96,22 +101,28 @@ pub fn step(
 fn grounded_check(
     objects: &Vec<Object>,
     player_shape: PlayerShape,
-    player_move_dir_horz: Vector3<f32>,
+    player_move_dir_horz: Option<Vector3<f32>>,
 ) -> (bool, Vector3<f32>) {
-    let ray_origin = player_shape.capsule1;
+    let center = player_shape.capsule1;
+    let velocity_dir = player_move_dir_horz.unwrap_or(Vector3::<f32>::zero());
+
+    let ray_origins = vec![center + velocity_dir, center - velocity_dir]; // Could add more
+
     let ray_direction = -Vector3::unit_y();
-    let _ghost_ray_origin = player_shape.capsule1 - player_move_dir_horz;
+    let _ghost_ray_origin = center - velocity_dir;
 
     let mut hit_triangle = false;
     let mut ground_normal = Vector3::zero();
     'all: for obj in objects {
         for tri in &obj.triangles {
-            if let Some(t) = ray_triangle_check(ray_origin, ray_direction, *tri) {
-                // TODO: Remove the magic number
-                if t < 0.51 {
-                    hit_triangle = true;
-                    ground_normal = tri.normal;
-                    break 'all;
+            for ray_slot in &ray_origins {
+                if let Some(t) = ray_triangle_check(*ray_slot, ray_direction, *tri) {
+                    // TODO: Remove the magic number
+                    if t < 0.71 {
+                        hit_triangle = true;
+                        ground_normal = tri.normal;
+                        break 'all;
+                    }
                 }
             }
         }

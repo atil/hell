@@ -156,8 +156,12 @@ pub fn project_vector_on_plane(v: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32>
     )
 }
 
-pub fn horz_norm(v: &Vector3<f32>) -> Vector3<f32> {
-    Vector3::new(v.x, 0.0, v.z).normalize()
+pub fn horz_norm(v: &Vector3<f32>) -> Option<Vector3<f32>> {
+    if v.magnitude2() < 0.00001 {
+        None
+    } else {
+        Some(Vector3::new(v.x, 0.0, v.z).normalize())
+    }
 }
 
 #[cfg(test)]
