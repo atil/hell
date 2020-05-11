@@ -86,6 +86,7 @@ pub fn step(
             // If more than one triangles is penetrating the capsule
             // then don't compute penetrations from the same capsule position
             // Triangles poke at the capsule one by one
+            // NOTE: This causes a sudden jump when walking over an edge
             player_shape.displace(penet);
 
             // Player will have no velocity in the penetration direction
@@ -107,20 +108,20 @@ pub fn grounded_check(
 
     let center = player_shape.capsule1;
     let velocity_dir = player_move_dir_horz.unwrap_or(Vector3::<f32>::zero());
-
     let ray_origins = vec![center + velocity_dir, center - velocity_dir]; // Could add more
-
     let ray_direction = -Vector3::unit_y();
-    let _ghost_ray_origin = center - velocity_dir;
+
+    const GROUNDED_HEIGHT: f32 = 0.71;
 
     let mut hit_triangle = false;
     let mut ground_normal = Vector3::zero();
     'all: for obj in objects {
         for tri in &obj.triangles {
+            // TODO: No need to run this loop if the velocity is zero
             for ray_slot in &ray_origins {
                 if let Some(t) = ray_triangle_check(*ray_slot, ray_direction, *tri) {
                     // TODO: Remove the magic number
-                    if t < 0.71 {
+                    if t < GROUNDED_HEIGHT {
                         hit_triangle = true;
                         ground_normal = tri.normal;
                         break 'all;
