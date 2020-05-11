@@ -11,7 +11,7 @@ pub struct Rect {
 }
 
 impl Rect {
-    pub fn new(top: f32, left: f32, width: f32, height: f32) -> Self {
+    pub fn new(left: f32, top: f32, width: f32, height: f32) -> Self {
         Self {
             left: left,
             top: top,
@@ -25,10 +25,11 @@ pub struct Batch {
     vao: u32,
     texture: u32,
     index_data: Vec<u32>,
+    pub draw_single_frame: bool,
 }
 
 impl Batch {
-    pub fn new(rects: Vec<Rect>, texture: u32) -> Self {
+    pub fn new(rects: Vec<Rect>, texture: u32, draw_single_frame: bool) -> Self {
         let mut batch_vertex_data = Vec::new();
         let mut batch_index_data = Vec::new();
 
@@ -111,6 +112,7 @@ impl Batch {
             vao: vao,
             texture: texture,
             index_data: batch_index_data,
+            draw_single_frame: draw_single_frame,
         }
     }
 

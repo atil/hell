@@ -3,6 +3,9 @@ use crate::object::Object;
 use cgmath::*;
 use std::cmp::Ordering;
 
+const PLAYER_HEIGHT: f32 = 1.0;
+const PLAYER_CAPSULE_RADIUS: f32 = 0.5;
+
 #[derive(Clone, Copy, Debug)]
 struct PlayerShape {
     capsule0: Point3<f32>,
@@ -62,8 +65,8 @@ pub fn step(
     objects: &Vec<Object>,
     player_pos: Point3<f32>,
     player_velocity: &mut Vector3<f32>,
-) -> (Vector3<f32>, bool, Vector3<f32>) {
-    let mut player_shape = PlayerShape::new(player_pos, 1.0, 0.5);
+) -> Vector3<f32> {
+    let mut player_shape = PlayerShape::new(player_pos, PLAYER_HEIGHT, PLAYER_CAPSULE_RADIUS);
     let mut total_displacement = Vector3::zero();
     for obj in objects {
         for tri in &obj.triangles {
@@ -92,17 +95,16 @@ pub fn step(
         }
     }
 
-    let (is_grounded, ground_normal) =
-        grounded_check(objects, player_shape, horz_norm(player_velocity));
-
-    (total_displacement, is_grounded, ground_normal)
+    total_displacement
 }
 
-fn grounded_check(
+pub fn grounded_check(
     objects: &Vec<Object>,
-    player_shape: PlayerShape,
+    player_pos: Point3<f32>,
     player_move_dir_horz: Option<Vector3<f32>>,
 ) -> (bool, Vector3<f32>) {
+    let player_shape = PlayerShape::new(player_pos, PLAYER_HEIGHT, PLAYER_CAPSULE_RADIUS);
+
     let center = player_shape.capsule1;
     let velocity_dir = player_move_dir_horz.unwrap_or(Vector3::<f32>::zero());
 
@@ -368,10 +370,14 @@ mod tests {
     }
 
     fn setup_player_shape_at_zero() -> PlayerShape {
-        PlayerShape::new(Point3::new(0.0, 0.0, 0.0), 1.0, 0.5)
+        PlayerShape::new(
+            Point3::new(0.0, 0.0, 0.0),
+            PLAYER_HEIGHT,
+            PLAYER_CAPSULE_RADIUS,
+        )
     }
 
     fn setup_player_shape(a: f32, b: f32, c: f32) -> PlayerShape {
-        PlayerShape::new(Point3::new(a, b, c), 1.0, 0.5)
+        PlayerShape::new(Point3::new(a, b, c), PLAYER_HEIGHT, PLAYER_CAPSULE_RADIUS)
     }
 }

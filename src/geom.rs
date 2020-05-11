@@ -102,15 +102,15 @@ pub fn get_closest_point_on_line_segment(
     if 0.0 < dot && dot < line_segment_length {
         // projection is on the line segment
         let point_on_line = p0 + dot * line_segment_dir;
-        return (point_on_line, (point - point_on_line).magnitude());
+        (point_on_line, (point - point_on_line).magnitude())
     } else {
         // not on the segment, take the shorter one
         let dist1 = (point - p0).magnitude();
         let dist2 = (point - p1).magnitude();
         if dist1 < dist2 {
-            return (p0, dist1);
+            (p0, dist1)
         } else {
-            return (p1, dist2);
+            (p1, dist2)
         }
     }
 }

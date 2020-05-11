@@ -1,7 +1,8 @@
 use crate::geom::*;
 use crate::keys::Keys;
 use crate::object::Object;
-use crate::physics;
+use crate::physics::*;
+use crate::ui::Ui;
 use cgmath::*;
 use sdl2::keyboard::Keycode;
 
@@ -18,8 +19,7 @@ pub struct Player {
     velocity: Vector3<f32>,
     position: Point3<f32>,
     forward: Vector3<f32>,
-    is_grounded: bool,
-    ground_normal: Vector3<f32>,
+    prev_is_grounded: bool,
     gonna_jump: bool,
 }
 
@@ -29,8 +29,7 @@ impl Player {
             velocity: Vector3::zero(),
             position: Point3::new(0.0, 20.0, -2.0),
             forward: Vector3::new(0.0, 0.0, -1.0),
-            is_grounded: false,
-            ground_normal: Vector3::zero(),
+            prev_is_grounded: false,
             gonna_jump: false,
         }
     }
@@ -40,9 +39,11 @@ impl Player {
         keys: &Keys,
         mouse: (f32, f32),
         collision_objects: &Vec<Object>,
+        ui: &mut Ui,
         dt: f32,
     ) {
         mouse_look(&mut self.forward, mouse);
+
         if keys.get_key_down(Keycode::Space) {
             self.gonna_jump = true;
         } else if keys.get_key_up(Keycode::Space) {
@@ -54,17 +55,24 @@ impl Player {
             horz_norm(&self.forward).unwrap_or(Vector3::<f32>::zero()),
         );
 
-        if self.is_grounded {
+        let (is_grounded, ground_normal) =
+            grounded_check(&collision_objects, self.position, horz_norm(&self.velocity));
+
+        if is_grounded {
             // Ground move
             // NOTE: These two should swap places, according to the reference code
             // But things go haywire in that case here. Don't know why
             accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
-            apply_friction(&mut self.velocity, dt);
+            if true || self.prev_is_grounded {
+                apply_friction(&mut self.velocity, dt);
+            }
 
-            self.velocity = project_vector_on_plane(self.velocity, self.ground_normal);
+            // No vetical velocity while grounded
+            self.velocity = project_vector_on_plane(self.velocity, ground_normal);
 
             if self.gonna_jump {
                 // TODO: Add a fraction of horizontal velocity to the jump direction
+                // println!("JUMP!");
                 self.velocity += Vector3::unit_y() * JUMP_FORCE;
             }
         } else {
@@ -83,12 +91,15 @@ impl Player {
 
         self.position += self.velocity * dt;
 
-        let (displacement, is_grounded, ground_normal) =
-            physics::step(&collision_objects, self.position, &mut self.velocity);
-
+        let displacement = step(&collision_objects, self.position, &mut self.velocity);
         self.position += displacement;
-        self.is_grounded = is_grounded;
-        self.ground_normal = ground_normal;
+
+        self.prev_is_grounded = is_grounded;
+
+        let velocity_string = format!("{:.3}", self.velocity.magnitude());
+        ui.draw_text(velocity_string.as_str());
+
+        // println!("{:.4} {}", self.velocity.magnitude(), is_grounded);
     }
 
     pub fn get_view_matrix(&self) -> Matrix4<f32> {

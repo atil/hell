@@ -28,6 +28,7 @@ fn main() {
     let sdl_context = sdl2::init().unwrap();
 
     let mut renderer = render::Renderer::init(&sdl_context);
+    let mut ui = ui::Ui::init();
     let mut time = time::Time::new(&sdl_context);
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut keys = keys::Keys::new();
@@ -83,8 +84,13 @@ fn main() {
                 .collect(),
         );
 
-        player.tick(&keys, (mouse_x, mouse_y), &objects, dt);
+        player.tick(&keys, (mouse_x, mouse_y), &objects, &mut ui, dt);
 
-        renderer.render(&objects, player.get_view_matrix());
+        unsafe {
+            renderer.render(&objects, player.get_view_matrix());
+            ui.draw();
+        }
+
+        renderer.finish_render();
     }
 }

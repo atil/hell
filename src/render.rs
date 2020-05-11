@@ -1,5 +1,4 @@
 use crate::object::Object;
-use crate::ui::Ui;
 use cgmath::*;
 use gl::types::*;
 
@@ -7,11 +6,11 @@ struct Screen {
     x: u32,
     y: u32,
 }
+
 #[allow(dead_code)] // The glContext needs to be kept alive, even though not being read
 pub struct Renderer {
     window: sdl2::video::Window,
     gl_context: sdl2::video::GLContext,
-    ui: Ui,
 }
 
 const SCREEN_SIZE: Screen = Screen { x: 800, y: 600 };
@@ -43,21 +42,18 @@ impl Renderer {
         Self {
             window: window,
             gl_context: gl_context,
-            ui: Ui::init(),
         }
     }
 
-    pub fn render(&mut self, objects: &Vec<Object>, view_matrix: Matrix4<f32>) {
-        unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+    pub unsafe fn render(&mut self, objects: &Vec<Object>, view_matrix: Matrix4<f32>) {
+        gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-            for obj in objects {
-                obj.draw(view_matrix);
-            }
-
-            self.ui.draw();
+        for obj in objects {
+            obj.draw(view_matrix);
         }
+    }
 
+    pub fn finish_render(&mut self) {
         self.window.gl_swap_window();
     }
 }
