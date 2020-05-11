@@ -7,11 +7,12 @@ use cgmath::*;
 use sdl2::keyboard::Keycode;
 
 const SENSITIVITY: f32 = 0.004;
-const GROUND_ACCELERATION: f32 = 0.005;
-const GROUND_FRICTION: f32 = 0.05;
+const GROUND_ACCELERATION: f32 = 0.003;
+const GROUND_FRICTION: f32 = 0.02;
+const GROUND_FRICTION_LOWER_LIMIT: f32 = 0.001; // Stop if the speed is lower than this
 const AIR_ACCELERATION: f32 = 0.00001;
 const AIR_DECELERATION: f32 = 0.00005;
-const MAX_SPEED_ON_ONE_DIMENSION: f32 = 0.75;
+const MAX_SPEED_ON_ONE_DIMENSION: f32 = 0.075;
 const GRAVITY: f32 = 0.00003;
 const JUMP_FORCE: f32 = 0.01;
 
@@ -60,19 +61,17 @@ impl Player {
 
         if is_grounded {
             // Ground move
-            // NOTE: These two should swap places, according to the reference code
-            // But things go haywire in that case here. Don't know why
-            accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
-            if true || self.prev_is_grounded {
+            if self.prev_is_grounded && !self.gonna_jump {
                 apply_friction(&mut self.velocity, dt);
             }
+
+            accelerate(&mut self.velocity, wish_dir, GROUND_ACCELERATION, dt);
 
             // No vetical velocity while grounded
             self.velocity = project_vector_on_plane(self.velocity, ground_normal);
 
             if self.gonna_jump {
                 // TODO: Add a fraction of horizontal velocity to the jump direction
-                // println!("JUMP!");
                 self.velocity += Vector3::unit_y() * JUMP_FORCE;
             }
         } else {
@@ -98,8 +97,6 @@ impl Player {
 
         let velocity_string = format!("{:.3}", self.velocity.magnitude());
         ui.draw_text(velocity_string.as_str());
-
-        // println!("{:.4} {}", self.velocity.magnitude(), is_grounded);
     }
 
     pub fn get_view_matrix(&self) -> Matrix4<f32> {
@@ -165,7 +162,8 @@ fn apply_friction(velocity: &mut Vector3<f32>, dt: f32) {
         return;
     }
 
-    let mut drop_amount = speed - (speed * GROUND_FRICTION * dt);
+    let down_limit = speed.max(GROUND_FRICTION_LOWER_LIMIT);
+    let mut drop_amount = speed - (down_limit * GROUND_FRICTION * dt);
     if drop_amount < 0.0 {
         drop_amount = 0.0;
     }
