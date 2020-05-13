@@ -16,6 +16,9 @@ pub fn load_from_file(texture_path: &str) -> u32 {
         let img = image::open(&Path::new(&texture_path)).expect("Error loading the texture");
         let img = img.flipv();
         let img_data = img.to_bytes();
+        if img.color() != image::ColorType::Rgba8 {
+            panic!("Image channels isn't RGBA8, instead {:?}", img.color());
+        }
         gl::TexImage2D(
             gl::TEXTURE_2D,
             0,
