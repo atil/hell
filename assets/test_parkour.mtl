@@ -3,3 +3,8 @@ map_Kd GridBox_Default.png
 Kd 1 1 1
 d 1
 
+newmtl Default_Map
+map_Kd default_map.png
+Kd 1 1 1
+d 1
+
