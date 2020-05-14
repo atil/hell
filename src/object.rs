@@ -11,7 +11,7 @@ pub struct Object<'a> {
 }
 
 impl<'a> Object<'a> {
-    pub fn new(material: &'a Material, mesh: &'a Mesh) -> Object<'a> {
+    pub fn new(mesh: &'a Mesh, material: &'a Material) -> Object<'a> {
         Object {
             transform: Matrix4::<f32>::identity(),
             material: material,
