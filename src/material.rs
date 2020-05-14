@@ -18,7 +18,7 @@ impl Material {
     pub fn new(
         vertex_data: Vec<f32>,
         index_data: Vec<u32>,
-        tobj_mat: &tobj::Material,
+        texture_name: &str,
         projection: Matrix4<f32>,
     ) -> Material {
         let vert_shader =
@@ -93,9 +93,7 @@ impl Material {
                 (5 * SIZEOF_FLOAT) as *const GLvoid,
             );
 
-            texture = texture::load_from_file(
-                format!("assets/{}", tobj_mat.diffuse_texture.as_str()).as_str(),
-            );
+            texture = texture::load_from_file(format!("assets/{}", texture_name).as_str());
             shader_program.set_i32("texture0", texture as i32);
 
             // Unbinding

@@ -7,7 +7,7 @@ pub struct Object<'a> {
     pub transform: Matrix4<f32>,
     material: &'a Material,
     pub mesh: &'a Mesh,
-    pub triangles: Vec<Triangle>,
+    pub triangles: Vec<Triangle>, // This is a list of transformed triangles
 }
 
 impl<'a> Object<'a> {
