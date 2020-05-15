@@ -71,6 +71,8 @@ impl Player {
             self.velocity = project_vector_on_plane(self.velocity, ground_normal);
 
             if self.gonna_jump {
+                self.gonna_jump = false;
+
                 // TODO: Add a fraction of horizontal velocity to the jump direction
                 self.velocity += Vector3::unit_y() * JUMP_FORCE;
             }
@@ -90,7 +92,8 @@ impl Player {
 
         self.position += self.velocity * dt;
 
-        let displacement = step(&collision_objects, self.position, &mut self.velocity);
+        let displacement =
+            resolve_penetration(&collision_objects, self.position, &mut self.velocity);
         self.position += displacement;
 
         self.prev_is_grounded = is_grounded;

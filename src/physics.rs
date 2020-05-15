@@ -61,7 +61,7 @@ impl std::fmt::Display for PlayerShape {
     }
 }
 
-pub fn step(
+pub fn resolve_penetration(
     objects: &Vec<Object>,
     player_pos: Point3<f32>,
     player_velocity: &mut Vector3<f32>,
@@ -106,12 +106,17 @@ pub fn grounded_check(
 ) -> (bool, Vector3<f32>) {
     let player_shape = PlayerShape::new(player_pos, PLAYER_HEIGHT, PLAYER_CAPSULE_RADIUS);
 
+    const GROUNDED_HEIGHT: f32 = 0.71;
+    const GHOST_RAY_OFFSET: f32 = 0.5;
+
     let center = player_shape.capsule1;
     let velocity_dir = player_move_dir_horz.unwrap_or(Vector3::<f32>::zero());
-    let ray_origins = vec![center + velocity_dir, center - velocity_dir]; // Could add more
-    let ray_direction = -Vector3::unit_y();
+    let ray_origins = vec![
+        center + velocity_dir * GHOST_RAY_OFFSET,
+        center - velocity_dir * GHOST_RAY_OFFSET,
+    ]; // Could add to the sides
 
-    const GROUNDED_HEIGHT: f32 = 0.71;
+    let ray_direction = -Vector3::unit_y();
 
     let mut hit_triangle = false;
     let mut ground_normal = Vector3::zero();
@@ -120,7 +125,6 @@ pub fn grounded_check(
             // TODO: No need to run this loop if the velocity is zero
             for ray_slot in &ray_origins {
                 if let Some(t) = ray_triangle_check(*ray_slot, ray_direction, *tri) {
-                    // TODO: Remove the magic number
                     if t < GROUNDED_HEIGHT {
                         hit_triangle = true;
                         ground_normal = tri.normal;
