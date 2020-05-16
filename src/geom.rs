@@ -103,7 +103,7 @@ pub fn get_closest_point_on_line_segment(
     point: Point3<f32>,
     p0: Point3<f32>,
     p1: Point3<f32>,
-) -> (Point3<f32>, f32) {
+) -> (Point3<f32>, f32, bool) {
     // TODO: Lots of sqrt here
     let line_segment_dir = (p1 - p0).normalize();
     let line_segment_length = (p1 - p0).magnitude();
@@ -112,15 +112,15 @@ pub fn get_closest_point_on_line_segment(
     if 0.0 < dot && dot < line_segment_length {
         // projection is on the line segment
         let point_on_line = p0 + dot * line_segment_dir;
-        (point_on_line, (point - point_on_line).magnitude())
+        (point_on_line, (point - point_on_line).magnitude(), true)
     } else {
         // not on the segment, take the shorter one
         let dist1 = (point - p0).magnitude();
         let dist2 = (point - p1).magnitude();
         if dist1 < dist2 {
-            (p0, dist1)
+            (p0, dist1, false)
         } else {
-            (p1, dist2)
+            (p1, dist2, false)
         }
     }
 }
@@ -149,9 +149,9 @@ pub fn ray_triangle_check(
 }
 
 pub fn get_closest_point_on_triangle(point: Point3<f32>, triangle: Triangle) -> (Point3<f32>, f32) {
-    let (p1, d1) = get_closest_point_on_line_segment(point, triangle.p0, triangle.p1);
-    let (p2, d2) = get_closest_point_on_line_segment(point, triangle.p1, triangle.p2);
-    let (p3, d3) = get_closest_point_on_line_segment(point, triangle.p2, triangle.p0);
+    let (p1, d1, _) = get_closest_point_on_line_segment(point, triangle.p0, triangle.p1);
+    let (p2, d2, _) = get_closest_point_on_line_segment(point, triangle.p1, triangle.p2);
+    let (p3, d3, _) = get_closest_point_on_line_segment(point, triangle.p2, triangle.p0);
 
     let min_dist = d1.min(d2.min(d3));
     match min_dist {

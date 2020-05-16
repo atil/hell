@@ -70,10 +70,6 @@ pub fn resolve_penetration(
     for obj in collision_objects {
         for tri in &obj.triangles {
             if let Some(mut penet) = compute_penetration(player_shape, *tri) {
-                println!(
-                    "====\nPOS {:?}\nPEN {:?}\nTRI: {:?}",
-                    player_pos, penet, tri
-                );
                 // Give an extra tiny push to the vertical displacement
                 // If the capsule's bottom tip is perfectly aligned with the ground,
                 // (for example the ground is y == 0.0 hand the player is as y == 1.0)
@@ -164,7 +160,9 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Option<
             dist2,
         ),
         Some(Ordering::Equal) => {
+            // Vertical triangle
             let mid_point = midpoint(player_shape.capsule0, player_shape.capsule1);
+
             (
                 mid_point,
                 mid_point - triangle.normal * player_shape.radius,
@@ -195,13 +193,34 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Option<
         let v = (closer_tip_point - point_on_plane).magnitude() * triangle.normal;
         Some(v)
     } else {
-        let (p, distance_to_triangle) = get_closest_point_on_triangle(point_on_plane, triangle);
+        let (closest_point_on_triangle, distance_to_triangle_on_plane) =
+            get_closest_point_on_triangle(point_on_plane, triangle);
 
-        if distance_to_triangle > player_shape.radius {
+        let (_, distance_to_triangle_line_segment, is_on_line_segment) =
+            get_closest_point_on_line_segment(
+                closest_point_on_triangle,
+                player_shape.capsule0,
+                player_shape.capsule1,
+            );
+
+        let capsule_segment_distance_to_triangle = {
+            if is_on_line_segment {
+                // Direct distance
+                distance_to_triangle_line_segment * distance_to_triangle_line_segment
+            } else {
+                // TODO: here seems to be a problem.
+                let a = closer_dist_to_plane;
+                let b = distance_to_triangle_on_plane;
+                a * a + b * b
+            }
+        };
+
+        if capsule_segment_distance_to_triangle > player_shape.radius * player_shape.radius {
             return None;
         }
 
-        let v = (point_on_plane - p).normalize() * (player_shape.radius - distance_to_triangle);
+        let v = (point_on_plane - closest_point_on_triangle).normalize()
+            * (player_shape.radius - distance_to_triangle_on_plane);
         Some(v)
     }
 }
@@ -320,7 +339,7 @@ mod tests {
 
     #[test]
     fn test_resolve_7() {
-        let player_shape = setup_player_shape(19.67636, 1.0, -2.3507338);
+        let player_shape = setup_player_shape(19.51, 1.0, -2.0);
 
         let tri = Triangle::new(
             Point3::new(20.0, 1.0, -10.0),
@@ -330,12 +349,11 @@ mod tests {
 
         assert_eq!(
             compute_penetration(player_shape, tri),
-            Some(Vector3::new(-0.17635918, 0.0, 0.0))
+            Some(Vector3::new(-0.010000229, 0.0, 0.0))
         );
     }
 
     #[test]
-    #[ignore]
     fn test_resolve_8() {
         let player_shape = setup_player_shape(-3.848164, 6.019497, -30.203638);
 
@@ -345,10 +363,7 @@ mod tests {
             Point3::new(0.0, 0.0, -20.0),
         );
 
-        assert_eq!(
-            compute_penetration(player_shape, tri),
-            None // Some(Vector3::new(0.0, 0.03825254, -0.076504886))
-        );
+        assert_eq!(compute_penetration(player_shape, tri), None);
     }
 
     #[test]
