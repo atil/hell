@@ -62,37 +62,34 @@ impl std::fmt::Display for PlayerShape {
 }
 
 pub fn resolve_penetration(
-    objects: &Vec<Object>,
+    collision_objects: &Vec<Object>,
     player_pos: Point3<f32>,
-    player_velocity: &mut Vector3<f32>,
 ) -> Vector3<f32> {
     let mut player_shape = PlayerShape::new(player_pos, PLAYER_HEIGHT, PLAYER_CAPSULE_RADIUS);
     let mut total_displacement = Vector3::zero();
-    for obj in objects {
+    for obj in collision_objects {
         for tri in &obj.triangles {
-            let mut penet = compute_penetration(player_shape, *tri);
-            if penet.magnitude2() < 0.01 {
-                continue;
+            if let Some(mut penet) = compute_penetration(player_shape, *tri) {
+                println!(
+                    "====\nPOS {:?}\nPEN {:?}\nTRI: {:?}",
+                    player_pos, penet, tri
+                );
+                // Give an extra tiny push to the vertical displacement
+                // If the capsule's bottom tip is perfectly aligned with the ground,
+                // (for example the ground is y == 0.0 hand the player is as y == 1.0)
+                // then it collides with ground triangles
+                if penet.y.abs() > 0.0 {
+                    penet.y += 0.0001 * penet.y.signum();
+                }
+
+                // If more than one triangles is penetrating the capsule
+                // then don't compute penetrations from the same capsule position
+                // Triangles poke at the capsule one by one
+                // NOTE: This causes a sudden jump when walking over an edge
+                player_shape.displace(penet);
+
+                total_displacement += penet;
             }
-
-            // Give an extra push to the vertical displacement
-            // If the capsule's bottom tip is perfectly aligned with the ground,
-            // (for example the ground is y == 0.0 hand the player is as y == 1.0)
-            // then it collides with ground triangles
-            if penet.y > 0.0 {
-                penet.y += 0.01 * penet.y.signum();
-            }
-
-            // If more than one triangles is penetrating the capsule
-            // then don't compute penetrations from the same capsule position
-            // Triangles poke at the capsule one by one
-            // NOTE: This causes a sudden jump when walking over an edge
-            player_shape.displace(penet);
-
-            // Player will have no velocity in the penetration direction
-            *player_velocity = project_vector_on_plane(*player_velocity, penet.normalize());
-
-            total_displacement += penet;
         }
     }
 
@@ -106,15 +103,24 @@ pub fn grounded_check(
 ) -> (bool, Vector3<f32>) {
     let player_shape = PlayerShape::new(player_pos, PLAYER_HEIGHT, PLAYER_CAPSULE_RADIUS);
 
-    const GROUNDED_HEIGHT: f32 = 0.71;
+    const GROUNDED_HEIGHT: f32 = 0.52;
     const GHOST_RAY_OFFSET: f32 = 0.5;
 
+    let (velocity_dir, side_dir) = match player_move_dir_horz {
+        Some(v) => (
+            v,
+            Quaternion::from_axis_angle(Vector3::unit_y(), Deg(90.0)).rotate_vector(v),
+        ),
+        None => (Vector3::unit_x(), Vector3::unit_z()),
+    };
+
     let center = player_shape.capsule1;
-    let velocity_dir = player_move_dir_horz.unwrap_or(Vector3::<f32>::zero());
     let ray_origins = vec![
         center + velocity_dir * GHOST_RAY_OFFSET,
         center - velocity_dir * GHOST_RAY_OFFSET,
-    ]; // Could add to the sides
+        center + side_dir * GHOST_RAY_OFFSET,
+        center - side_dir * GHOST_RAY_OFFSET,
+    ];
 
     let ray_direction = -Vector3::unit_y();
 
@@ -138,9 +144,9 @@ pub fn grounded_check(
     (hit_triangle, ground_normal)
 }
 
-fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3<f32> {
+fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Option<Vector3<f32>> {
     if player_shape.is_behind_triangle(&triangle) {
-        return Vector3::zero();
+        return None;
     }
 
     let dist1 = point_triangle_plane_distance(player_shape.capsule0, triangle);
@@ -173,7 +179,7 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3
 
     if closer_dist_to_plane > player_shape.radius {
         // Away from the triangle plane
-        return Vector3::zero();
+        return None;
     }
 
     let point_on_plane = project_point_on_triangle_plane(closer_point, triangle);
@@ -186,15 +192,17 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Vector3
     {
         // Projected point is in triangle
         // Since we're close to the plane, this case is a definite penetration
-        (closer_tip_point - point_on_plane).magnitude() * triangle.normal
+        let v = (closer_tip_point - point_on_plane).magnitude() * triangle.normal;
+        Some(v)
     } else {
         let (p, distance_to_triangle) = get_closest_point_on_triangle(point_on_plane, triangle);
 
         if distance_to_triangle > player_shape.radius {
-            return Vector3::<f32>::zero();
+            return None;
         }
 
-        (point_on_plane - p).normalize() * (player_shape.radius - distance_to_triangle)
+        let v = (point_on_plane - p).normalize() * (player_shape.radius - distance_to_triangle);
+        Some(v)
     }
 }
 
@@ -218,7 +226,7 @@ mod tests {
 
         assert_eq!(
             compute_penetration(player_shape, tri),
-            Vector3::new(0.0, 0.75, 0.0)
+            Some(Vector3::new(0.0, 0.75, 0.0))
         );
     }
 
@@ -238,7 +246,7 @@ mod tests {
 
         assert_eq!(
             compute_penetration(player_shape, tri),
-            Vector3::new(0.0, 0.97, 0.0)
+            Some(Vector3::new(0.0, 0.97, 0.0))
         );
     }
 
@@ -258,7 +266,7 @@ mod tests {
 
         assert_eq!(
             compute_penetration(player_shape, tri),
-            Vector3::new(0.0, 1.0 - 0.92 + 0.5, 0.0)
+            Some(Vector3::new(0.0, 1.0 - 0.92 + 0.5, 0.0))
         );
     }
 
@@ -274,7 +282,7 @@ mod tests {
 
         assert_eq!(
             compute_penetration(player_shape, tri),
-            Vector3::new(0.07999992, 0.0, 0.0)
+            Some(Vector3::new(0.07999992, 0.0, 0.0))
         );
     }
 
@@ -290,7 +298,7 @@ mod tests {
 
         assert_eq!(
             compute_penetration(player_shape, tri),
-            Vector3::new(0.14000034, 0.0, 0.0)
+            Some(Vector3::new(0.14000034, 0.0, 0.0))
         );
     }
 
@@ -306,7 +314,7 @@ mod tests {
 
         assert_eq!(
             compute_penetration(player_shape, tri),
-            Vector3::new(0.19999981, 0.0, 0.0)
+            Some(Vector3::new(0.19999981, 0.0, 0.0))
         );
     }
 
@@ -322,7 +330,24 @@ mod tests {
 
         assert_eq!(
             compute_penetration(player_shape, tri),
-            Vector3::new(-0.17635918, 0.0, 0.0)
+            Some(Vector3::new(-0.17635918, 0.0, 0.0))
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn test_resolve_8() {
+        let player_shape = setup_player_shape(-3.848164, 6.019497, -30.203638);
+
+        let tri = Triangle::new(
+            Point3::new(0.0, 5.0, -30.0),
+            Point3::new(-10.0, 5.0, -30.0),
+            Point3::new(0.0, 0.0, -20.0),
+        );
+
+        assert_eq!(
+            compute_penetration(player_shape, tri),
+            None // Some(Vector3::new(0.0, 0.03825254, -0.076504886))
         );
     }
 
@@ -336,10 +361,7 @@ mod tests {
             Point3::new(8.0, 0.0, 0.0),
         );
 
-        assert_eq!(
-            compute_penetration(player_shape, tri),
-            Vector3::<f32>::zero()
-        );
+        assert_eq!(compute_penetration(player_shape, tri), None);
     }
 
     #[test]
@@ -352,10 +374,7 @@ mod tests {
             Point3::new(-1.0, 1.25, 0.0),
         );
 
-        assert_eq!(
-            compute_penetration(player_shape, tri),
-            Vector3::new(0.0, 0.0, 0.0)
-        );
+        assert_eq!(compute_penetration(player_shape, tri), None);
     }
 
     #[test]
@@ -368,10 +387,7 @@ mod tests {
             Point3::new(-10.0, 0.0, -20.0),
         );
 
-        assert_eq!(
-            compute_penetration(player_shape, tri),
-            Vector3::new(0.0, 0.0, 0.0)
-        );
+        assert_eq!(compute_penetration(player_shape, tri), None);
     }
 
     fn setup_player_shape_at_zero() -> PlayerShape {

@@ -4,10 +4,15 @@ use crate::mesh::Mesh;
 use cgmath::*;
 
 pub struct Object<'a> {
+    // TODO: Static geometry won't have this as a variable
+    // It'll be fed in via the ctor
     pub transform: Matrix4<f32>,
     material: &'a Material,
     pub mesh: &'a Mesh,
-    pub triangles: Vec<Triangle>, // This is a list of transformed triangles
+
+    // This is a list of transformed triangles
+    // It's good to have this cached for static geometry
+    pub triangles: Vec<Triangle>,
 }
 
 impl<'a> Object<'a> {

@@ -15,6 +15,7 @@ const AIR_DECELERATION: f32 = 0.00005;
 const MAX_SPEED_ON_ONE_DIMENSION: f32 = 0.075;
 const GRAVITY: f32 = 0.00003;
 const JUMP_FORCE: f32 = 0.01;
+const START_POSITION: Point3<f32> = Point3::new(0.0, 20.0, -2.0);
 
 pub struct Player {
     velocity: Vector3<f32>,
@@ -28,7 +29,7 @@ impl Player {
     pub fn new() -> Player {
         Player {
             velocity: Vector3::zero(),
-            position: Point3::new(0.0, 20.0, -2.0),
+            position: START_POSITION,
             forward: Vector3::new(0.0, 0.0, -1.0),
             prev_is_grounded: false,
             gonna_jump: false,
@@ -92,13 +93,21 @@ impl Player {
 
         self.position += self.velocity * dt;
 
-        let displacement =
-            resolve_penetration(&collision_objects, self.position, &mut self.velocity);
+        let displacement = resolve_penetration(&collision_objects, self.position);
         self.position += displacement;
+
+        self.velocity = project_vector_on_plane(self.velocity, displacement.normalize());
 
         self.prev_is_grounded = is_grounded;
 
+        if self.position.y < -30.0 {
+            // Fell down, reset
+            self.velocity = Vector3::zero();
+            self.position = START_POSITION;
+        }
+
         let velocity_string = format!("{:.3}", self.velocity.magnitude());
+        // println!("{:?} {:?} {}", self.position, displacement, is_grounded);
         ui.draw_text(velocity_string.as_str());
     }
 

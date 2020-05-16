@@ -1,7 +1,7 @@
 use crate::math::*;
 use cgmath::*;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Triangle {
     pub p0: Point3<f32>,
     pub p1: Point3<f32>,
@@ -45,6 +45,16 @@ impl std::fmt::Display for Triangle {
             "P0: [{:?}] P1: [{:?}] P2:{:?}",
             self.p0, self.p1, self.p2
         )
+    }
+}
+
+impl std::fmt::Debug for Triangle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Triangle")
+            .field("p0", &self.p0)
+            .field("p1", &self.p1)
+            .field("p2", &self.p2)
+            .finish()
     }
 }
 
@@ -173,10 +183,11 @@ pub fn project_vector_on_plane(v: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32>
 }
 
 pub fn horz_norm(v: &Vector3<f32>) -> Option<Vector3<f32>> {
-    if v.magnitude2() < 0.00001 {
+    let v_horz = Vector3::new(v.x, 0.0, v.z);
+    if v_horz.magnitude2() < 0.00001 {
         None
     } else {
-        Some(Vector3::new(v.x, 0.0, v.z).normalize())
+        Some(v_horz.normalize())
     }
 }
 
@@ -246,6 +257,22 @@ mod tests {
         assert_eq!(
             project_point_on_triangle_plane(p, tri),
             Point3::new(0.0, -1.0, 0.0)
+        );
+    }
+
+    #[test]
+    fn test_raycast() {
+        let tri = Triangle::new(
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(-10.0, 0.0, -10.0),
+            Point3::new(0.0, 0.0, -10.0),
+        );
+        let ray_origin = Point3::new(0.0, 0.51, -2.0);
+        let ray_direction = -Vector3::unit_y();
+
+        assert_eq!(
+            ray_triangle_check(ray_origin, ray_direction, tri),
+            Some(0.51)
         );
     }
 }
