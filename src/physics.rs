@@ -99,8 +99,8 @@ pub fn grounded_check(
 ) -> (bool, Vector3<f32>) {
     let player_shape = PlayerShape::new(player_pos, PLAYER_HEIGHT, PLAYER_CAPSULE_RADIUS);
 
-    const GROUNDED_HEIGHT: f32 = 0.52;
-    const GHOST_RAY_OFFSET: f32 = 0.5;
+    const GROUNDED_HEIGHT: f32 = 0.51;
+    const GHOST_RAY_OFFSET: f32 = PLAYER_CAPSULE_RADIUS - 0.01;
 
     let (velocity_dir, side_dir) = match player_move_dir_horz {
         Some(v) => (
@@ -208,14 +208,13 @@ fn compute_penetration(player_shape: PlayerShape, triangle: Triangle) -> Option<
                 // Direct distance
                 distance_to_triangle_line_segment * distance_to_triangle_line_segment
             } else {
-                // TODO: here seems to be a problem.
                 let a = closer_dist_to_plane;
                 let b = distance_to_triangle_on_plane;
-                a * a + b * b
+                a * a + b * b // Pisagor
             }
         };
 
-        if capsule_segment_distance_to_triangle > player_shape.radius * player_shape.radius {
+        if capsule_segment_distance_to_triangle >= player_shape.radius * player_shape.radius {
             return None;
         }
 
@@ -355,15 +354,18 @@ mod tests {
 
     #[test]
     fn test_resolve_8() {
-        let player_shape = setup_player_shape(-3.848164, 6.019497, -30.203638);
+        let player_shape = setup_player_shape(9.5, 1.4914774, 5.7156773);
 
         let tri = Triangle::new(
-            Point3::new(0.0, 5.0, -30.0),
-            Point3::new(-10.0, 5.0, -30.0),
-            Point3::new(0.0, 0.0, -20.0),
+            Point3::new(10.0, 1.0, 0.0),
+            Point3::new(10.0, 0.0, 0.0),
+            Point3::new(10.0, 1.0, 10.0),
         );
 
-        assert_eq!(compute_penetration(player_shape, tri), None);
+        assert_eq!(
+            compute_penetration(player_shape, tri),
+            None // Some(Vector3::new(0.0, 0.008522629, 0.0))
+        );
     }
 
     #[test]
@@ -387,6 +389,19 @@ mod tests {
             Point3::new(1.0, 1.25, 0.0),
             Point3::new(0.0, 1.25, -1.0),
             Point3::new(-1.0, 1.25, 0.0),
+        );
+
+        assert_eq!(compute_penetration(player_shape, tri), None);
+    }
+
+    #[test]
+    fn test_resolve_no_collision_3() {
+        let player_shape = setup_player_shape(-3.848164, 6.019497, -30.203638);
+
+        let tri = Triangle::new(
+            Point3::new(0.0, 5.0, -30.0),
+            Point3::new(-10.0, 5.0, -30.0),
+            Point3::new(0.0, 0.0, -20.0),
         );
 
         assert_eq!(compute_penetration(player_shape, tri), None);
