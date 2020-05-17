@@ -5,10 +5,27 @@ use cgmath::Matrix4;
 use gl::types::*;
 use std::ffi::CString;
 
+pub struct ColorRGB {
+    r: f32,
+    g: f32,
+    b: f32,
+}
+
+impl ColorRGB {
+    pub fn from_slice(slice: [f32; 3]) -> ColorRGB {
+        ColorRGB {
+            r: slice[0],
+            g: slice[1],
+            b: slice[2],
+        }
+    }
+}
+
 pub struct Material {
     vbo: GLuint,
     ibo: GLuint,
     vao: GLuint,
+    diffuse: ColorRGB,
     texture: GLuint,
     program: Program,
     index_data: Vec<u32>,
@@ -18,6 +35,7 @@ impl Material {
     pub fn new(
         vertex_data: Vec<f32>,
         index_data: Vec<u32>,
+        diffuse_color: ColorRGB,
         texture_name: &str,
         projection: Matrix4<f32>,
     ) -> Material {
@@ -107,6 +125,7 @@ impl Material {
             vbo: vbo,
             ibo: ibo,
             vao: vao,
+            diffuse: diffuse_color,
             texture: texture,
             program: shader_program,
             index_data: index_data,
