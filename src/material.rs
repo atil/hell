@@ -4,28 +4,23 @@ use crate::texture;
 use cgmath::Matrix4;
 use gl::types::*;
 
-pub struct ColorRGB {
+#[derive(Copy, Clone, Debug)]
+struct Color {
     r: f32,
     g: f32,
     b: f32,
 }
 
-impl ColorRGB {
-    pub fn from_slice(slice: [f32; 3]) -> ColorRGB {
-        ColorRGB {
-            r: slice[0],
-            g: slice[1],
-            b: slice[2],
-        }
-    }
+enum MaterialType {
+    Texture(GLuint),
+    Color(Color),
 }
 
 pub struct Material {
     vbo: GLuint,
     ibo: GLuint,
     vao: GLuint,
-    diffuse: ColorRGB,
-    texture: GLuint,
+    m_type: MaterialType,
     program: Program,
     index_data: Vec<u32>,
 }
@@ -34,17 +29,34 @@ impl Material {
     pub fn new(
         vertex_data: Vec<f32>,
         index_data: Vec<u32>,
-        diffuse_color: ColorRGB,
-        texture_name: &str,
+        tobj_mat: tobj::Material,
         projection: Matrix4<f32>,
     ) -> Material {
-        let shader_program = Program::from_shader("src/shaders/triangle.glsl")
-            .expect("Problem loading world shader");
+        let (mat_type, shader_path) = {
+            if !tobj_mat.diffuse_texture.is_empty() {
+                let texture = texture::load_from_file(
+                    format!("assets/{}", tobj_mat.diffuse_texture).as_str(),
+                );
+
+                (MaterialType::Texture(texture), "src/shaders/triangle.glsl")
+            } else {
+                (
+                    MaterialType::Color(Color {
+                        r: tobj_mat.diffuse[0],
+                        g: tobj_mat.diffuse[1],
+                        b: tobj_mat.diffuse[2],
+                    }),
+                    "src/shaders/color.glsl",
+                )
+            }
+        };
+
+        let shader_program =
+            Program::from_shader(shader_path).expect("Problem loading world shader");
 
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;
         let mut vao: GLuint = 0;
-        let texture: GLuint;
 
         unsafe {
             gl::GenBuffers(1, &mut vbo);
@@ -77,7 +89,7 @@ impl Material {
                 3,
                 gl::FLOAT,
                 gl::FALSE,
-                (8 * SIZEOF_FLOAT) as GLsizei,
+                (5 * SIZEOF_FLOAT) as GLsizei,
                 std::ptr::null(),
             );
 
@@ -88,28 +100,18 @@ impl Material {
                 2,
                 gl::FLOAT,
                 gl::FALSE,
-                (8 * SIZEOF_FLOAT) as GLsizei,
+                (5 * SIZEOF_FLOAT) as GLsizei,
                 (3 * SIZEOF_FLOAT) as *const GLvoid,
             );
 
-            // Normals
-            gl::EnableVertexAttribArray(2);
-            gl::VertexAttribPointer(
-                2,
-                3,
-                gl::FLOAT,
-                gl::FALSE,
-                (8 * SIZEOF_FLOAT) as GLsizei,
-                (5 * SIZEOF_FLOAT) as *const GLvoid,
-            );
-
-            if !texture_name.is_empty() {
-                texture = texture::load_from_file(format!("assets/{}", texture_name).as_str());
-                shader_program.set_i32("texture0", texture as i32);
-            } else {
-                texture = 0;
+            match mat_type {
+                MaterialType::Texture(texture_handle) => {
+                    shader_program.set_i32("texture0", texture_handle as i32);
+                }
+                MaterialType::Color(color) => {
+                    shader_program.set_vec3("color0", [color.r, color.g, color.b]);
+                }
             }
-
             // Unbinding
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
             gl::BindVertexArray(0);
@@ -121,8 +123,7 @@ impl Material {
             vbo: vbo,
             ibo: ibo,
             vao: vao,
-            diffuse: diffuse_color,
-            texture: texture,
+            m_type: mat_type,
             program: shader_program,
             index_data: index_data,
         }
@@ -133,7 +134,10 @@ impl Material {
         self.program.set_matrix("model", model);
         self.program.set_matrix("view", view);
 
-        gl::BindTexture(gl::TEXTURE_2D, self.texture);
+        match self.m_type {
+            MaterialType::Texture(tex) => gl::BindTexture(gl::TEXTURE_2D, tex),
+            MaterialType::Color(c) => self.program.set_vec3("color0", [c.r, c.g, c.b]),
+        }
 
         gl::BindVertexArray(self.vao);
         gl::DrawElements(
@@ -151,7 +155,9 @@ impl Drop for Material {
             gl::DeleteVertexArrays(1, &self.vao);
             gl::DeleteBuffers(1, &self.vbo);
             gl::DeleteBuffers(1, &self.ibo);
-            gl::DeleteTextures(1, &self.texture);
+            if let MaterialType::Texture(texture) = self.m_type {
+                gl::DeleteTextures(1, &texture);
+            }
         }
     }
 }

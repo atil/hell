@@ -22,8 +22,7 @@ pub fn load_obj(path: &str) -> (Vec<Mesh>, Vec<Material>) {
         materials.push(material::Material::new(
             vertex_data,
             index_data,
-            material::ColorRGB::from_slice(tobj_mat.diffuse),
-            tobj_mat.diffuse_texture.as_str(),
+            tobj_mat,
             render::get_projection_matrix(),
         ));
     }

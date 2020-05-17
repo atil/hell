@@ -84,20 +84,17 @@ impl Program {
     }
 
     pub unsafe fn set_matrix(&self, name: &str, matrix: Matrix4<f32>) {
-        gl::ProgramUniformMatrix4fv(
-            self.id,
-            self.get_uniform_location(name),
-            1,
-            gl::FALSE,
-            matrix.as_ptr(),
-        );
+        gl::ProgramUniformMatrix4fv(self.id, self.loc(name), 1, gl::FALSE, matrix.as_ptr());
     }
 
-    pub unsafe fn set_i32(&self, name: &str, integer: i32) {
-        gl::Uniform1i(self.get_uniform_location(name), integer);
+    pub unsafe fn set_i32(&self, name: &str, i: i32) {
+        gl::Uniform1i(self.loc(name), i);
     }
 
-    unsafe fn get_uniform_location(&self, name: &str) -> i32 {
+    pub unsafe fn set_vec3(&self, name: &str, vec: [f32; 3]) {
+        gl::Uniform3f(self.loc(name), vec[0], vec[1], vec[2]);
+    }
+    unsafe fn loc(&self, name: &str) -> i32 {
         gl::GetUniformLocation(self.id, CString::new(name).unwrap().as_ptr())
     }
 }

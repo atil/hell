@@ -6,28 +6,19 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-out VS_OUTPUT {
-    vec2 TexCoord;
-} OUT;
-
 void main()
 {
     gl_Position = projection * view * model * vec4(Position, 1.0);
-    OUT.TexCoord = vec2(aTexCoord.x, aTexCoord.y);
 }
 #endif
 
 #ifdef FRAGMENT
-uniform sampler2D texture0;
+uniform vec3 color0;
 
-in VS_OUTPUT {
-    vec2 TexCoord;
-} IN;
-
-out vec4 Color;
+out vec4 OutColor;
 
 void main()
 {
-    Color = texture(texture0, IN.TexCoord);
+    OutColor = vec4(color0, 1); // why don't we have a color here?
 }
 #endif
