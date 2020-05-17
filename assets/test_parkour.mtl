@@ -8,3 +8,7 @@ map_Kd default_map.png
 Kd 1 1 1
 d 1
 
+newmtl MaterialBrown1
+Kd 0.2075472 0.1251912 0.1086686
+d 1
+
