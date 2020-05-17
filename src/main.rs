@@ -33,6 +33,8 @@ fn main() {
     let mut keys = keys::Keys::new();
     let mut player = player::Player::new();
 
+    // test
+
     let (meshes, materials) = assets::load_obj("assets/test_parkour.obj");
 
     let mut objects = Vec::new();

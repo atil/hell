@@ -3,7 +3,6 @@ use crate::shader::*;
 use crate::texture;
 use cgmath::Matrix4;
 use gl::types::*;
-use std::ffi::CString;
 
 pub struct ColorRGB {
     r: f32,
@@ -39,15 +38,8 @@ impl Material {
         texture_name: &str,
         projection: Matrix4<f32>,
     ) -> Material {
-        let vert_shader =
-            Shader::from_vert_source(&CString::new(include_str!("triangle.vert")).unwrap())
-                .unwrap();
-
-        let frag_shader =
-            Shader::from_frag_source(&CString::new(include_str!("triangle.frag")).unwrap())
-                .unwrap();
-
-        let shader_program = Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
+        let shader_program =
+            Program::from_shader("src/triangle.glsl").expect("Problem loading world shader");
 
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;
@@ -111,8 +103,12 @@ impl Material {
                 (5 * SIZEOF_FLOAT) as *const GLvoid,
             );
 
-            texture = texture::load_from_file(format!("assets/{}", texture_name).as_str());
-            shader_program.set_i32("texture0", texture as i32);
+            if !texture_name.is_empty() {
+                texture = texture::load_from_file(format!("assets/{}", texture_name).as_str());
+                shader_program.set_i32("texture0", texture as i32);
+            } else {
+                texture = 0;
+            }
 
             // Unbinding
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);

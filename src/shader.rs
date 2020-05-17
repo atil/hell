@@ -1,58 +1,82 @@
 use cgmath::{Matrix, Matrix4};
 use gl;
+use gl::types::*;
 use std;
 use std::ffi::{CStr, CString};
+use std::fs::File;
+use std::io::prelude::*;
+
+const VERSION: &'static str = "#version 420 core\r\n";
+const DEFINE_VERTEX: &'static str = "#define VERTEX\r\n";
+const DEFINE_FRAGMENT: &'static str = "#define FRAGMENT\r\n";
 
 pub struct Program {
     id: gl::types::GLuint,
 }
 
 impl Program {
-    pub fn from_shaders(shaders: &[Shader]) -> Result<Program, String> {
+    pub fn from_shader(path: &str) -> Result<Program, String> {
+        let mut shader_file = File::open(path).expect("Unable to open shader file");
+        let mut shader_text = String::new();
+        shader_file
+            .read_to_string(&mut shader_text)
+            .expect("Unable to read shader file");
+
         let program_id = unsafe { gl::CreateProgram() };
-
-        for shader in shaders {
-            unsafe {
-                gl::AttachShader(program_id, shader.id());
-            }
-        }
-
+        let vert_id = Program::create_shader(&shader_text, gl::VERTEX_SHADER, DEFINE_VERTEX)?;
+        let frag_id = Program::create_shader(&shader_text, gl::FRAGMENT_SHADER, DEFINE_FRAGMENT)?;
         unsafe {
+            let mut success: GLint = 1;
+            gl::AttachShader(program_id, vert_id);
+            gl::AttachShader(program_id, frag_id);
             gl::LinkProgram(program_id);
-        }
-
-        let mut success: gl::types::GLint = 1;
-        unsafe {
             gl::GetProgramiv(program_id, gl::LINK_STATUS, &mut success);
-        }
 
-        if success == 0 {
-            let mut len: gl::types::GLint = 0;
-            unsafe {
+            if success == 0 {
+                let mut len: GLint = 0;
                 gl::GetProgramiv(program_id, gl::INFO_LOG_LENGTH, &mut len);
-            }
 
-            let error = create_whitespace_cstring_with_len(len as usize);
-
-            unsafe {
+                let error = create_whitespace_cstring_with_len(len as usize);
                 gl::GetProgramInfoLog(
                     program_id,
                     len,
                     std::ptr::null_mut(),
-                    error.as_ptr() as *mut gl::types::GLchar,
+                    error.as_ptr() as *mut GLchar,
                 );
+
+                return Err(error.to_string_lossy().into_owned());
             }
 
-            return Err(error.to_string_lossy().into_owned());
-        }
-
-        for shader in shaders {
-            unsafe {
-                gl::DetachShader(program_id, shader.id());
-            }
+            gl::DetachShader(program_id, vert_id);
+            gl::DetachShader(program_id, frag_id);
         }
 
         Ok(Program { id: program_id })
+    }
+
+    fn create_shader(source: &str, shader_type: GLenum, define: &str) -> Result<GLuint, String> {
+        let id = unsafe { gl::CreateShader(shader_type) };
+        let mut success: GLint = 1;
+
+        unsafe {
+            let shader_text = format!("{}{}{}", VERSION, define, source);
+            let cstr: &CStr = &CString::new(shader_text).unwrap();
+            gl::ShaderSource(id, 1, &cstr.as_ptr(), std::ptr::null());
+            gl::CompileShader(id);
+            gl::GetShaderiv(id, gl::COMPILE_STATUS, &mut success);
+
+            if success == 0 {
+                let mut len: GLint = 0;
+                gl::GetShaderiv(id, gl::INFO_LOG_LENGTH, &mut len);
+
+                let error = create_whitespace_cstring_with_len(len as usize);
+                gl::GetShaderInfoLog(id, len, std::ptr::null_mut(), error.as_ptr() as *mut GLchar);
+
+                return Err(error.to_string_lossy().into_owned());
+            }
+        }
+
+        Ok(id)
     }
 
     pub unsafe fn set_used(&self) {
@@ -84,72 +108,6 @@ impl Drop for Program {
             gl::DeleteProgram(self.id);
         }
     }
-}
-
-pub struct Shader {
-    id: gl::types::GLuint,
-}
-
-impl Shader {
-    pub fn from_source(source: &CStr, kind: gl::types::GLenum) -> Result<Shader, String> {
-        let id = shader_from_source(source, kind)?;
-        Ok(Shader { id })
-    }
-
-    pub fn from_vert_source(source: &CStr) -> Result<Shader, String> {
-        Shader::from_source(source, gl::VERTEX_SHADER)
-    }
-
-    pub fn from_frag_source(source: &CStr) -> Result<Shader, String> {
-        Shader::from_source(source, gl::FRAGMENT_SHADER)
-    }
-
-    pub fn id(&self) -> gl::types::GLuint {
-        self.id
-    }
-}
-
-impl Drop for Shader {
-    fn drop(&mut self) {
-        unsafe {
-            gl::DeleteShader(self.id);
-        }
-    }
-}
-
-fn shader_from_source(source: &CStr, kind: gl::types::GLenum) -> Result<gl::types::GLuint, String> {
-    let id = unsafe { gl::CreateShader(kind) };
-    unsafe {
-        gl::ShaderSource(id, 1, &source.as_ptr(), std::ptr::null());
-        gl::CompileShader(id);
-    }
-
-    let mut success: gl::types::GLint = 1;
-    unsafe {
-        gl::GetShaderiv(id, gl::COMPILE_STATUS, &mut success);
-    }
-
-    if success == 0 {
-        let mut len: gl::types::GLint = 0;
-        unsafe {
-            gl::GetShaderiv(id, gl::INFO_LOG_LENGTH, &mut len);
-        }
-
-        let error = create_whitespace_cstring_with_len(len as usize);
-
-        unsafe {
-            gl::GetShaderInfoLog(
-                id,
-                len,
-                std::ptr::null_mut(),
-                error.as_ptr() as *mut gl::types::GLchar,
-            );
-        }
-
-        return Err(error.to_string_lossy().into_owned());
-    }
-
-    Ok(id)
 }
 
 fn create_whitespace_cstring_with_len(len: usize) -> CString {
