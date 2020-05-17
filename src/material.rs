@@ -38,8 +38,8 @@ impl Material {
         texture_name: &str,
         projection: Matrix4<f32>,
     ) -> Material {
-        let shader_program =
-            Program::from_shader("src/triangle.glsl").expect("Problem loading world shader");
+        let shader_program = Program::from_shader("src/shaders/triangle.glsl")
+            .expect("Problem loading world shader");
 
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;
