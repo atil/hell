@@ -7,12 +7,12 @@ use cgmath::*;
 use sdl2::keyboard::Keycode;
 
 const SENSITIVITY: f32 = 0.004;
-const GROUND_ACCELERATION: f32 = 0.003;
+const GROUND_ACCELERATION: f32 = 0.3;
 const GROUND_FRICTION: f32 = 0.02;
 const GROUND_FRICTION_LOWER_LIMIT: f32 = 0.001; // Stop if the speed is lower than this
-const AIR_ACCELERATION: f32 = 0.00001;
+const AIR_ACCELERATION: f32 = 0.00005;
 const AIR_DECELERATION: f32 = 0.00005;
-const MAX_SPEED_ON_ONE_DIMENSION: f32 = 0.075;
+const MAX_SPEED_ON_ONE_DIMENSION: f32 = 0.01;
 const GRAVITY: f32 = 0.00003;
 const JUMP_FORCE: f32 = 0.01;
 const START_POSITION: Point3<f32> = Point3::new(0.0, 20.0, -2.0);
@@ -96,8 +96,6 @@ impl Player {
         let displacement = resolve_penetration(&collision_objects, self.position);
         self.position += displacement;
 
-        self.velocity = project_vector_on_plane(self.velocity, displacement.normalize());
-
         self.prev_is_grounded = is_grounded;
 
         if self.position.y < -30.0 {
@@ -106,7 +104,7 @@ impl Player {
             self.position = START_POSITION;
         }
 
-        let velocity_string = format!("{:.3}", self.velocity.magnitude());
+        let velocity_string = format!("{:.3}", horz(&self.velocity).magnitude());
         // println!("{:?} {:?} {}", self.position, displacement, is_grounded);
         ui.draw_text(velocity_string.as_str());
     }
