@@ -37,6 +37,13 @@ impl Ui<'_> {
         }
     }
 
+    pub fn draw_text(&mut self, text: &str) {
+        let rect = Rect::new(-0.9, 0.9, 0.2, 0.2); // TODO: Provide this from the outside
+        let texture = texture::create_from_text(text, 32.0, &self.font);
+
+        self.batches.push(Batch::new(vec![rect], texture, true));
+    }
+
     pub unsafe fn draw(&mut self) {
         self.program.set_used();
 
@@ -47,10 +54,4 @@ impl Ui<'_> {
         self.batches.retain(|b| !b.draw_single_frame);
     }
 
-    pub fn draw_text(&mut self, text: &str) {
-        let rect = Rect::new(-0.9, 0.9, 0.2, 0.2); // TODO: Provide this from the outside
-        let texture = texture::create_from_text(text, 32.0, &self.font);
-
-        self.batches.push(Batch::new(vec![rect], texture, true));
-    }
 }

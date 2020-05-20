@@ -32,7 +32,7 @@ impl Material {
         tobj_mat: tobj::Material,
         projection: Matrix4<f32>,
     ) -> Material {
-        let (mat_type, shader_path) = get_material_type(&tobj_mat);
+        let (mat_type, shader_path) = Material::get_material_type(&tobj_mat);
         let shader_program =
             Program::from_shader(shader_path).expect("Problem loading world shader");
 

@@ -24,6 +24,8 @@ impl Rect {
 
 pub struct Batch {
     vao: u32,
+    vbo: u32,
+    ibo: u32,
     texture: u32,
     index_data: Vec<u32>,
     pub draw_single_frame: bool,
@@ -111,6 +113,8 @@ impl Batch {
 
         Self {
             vao: vao,
+            vbo: vbo,
+            ibo: ibo,
             texture: texture,
             index_data: batch_index_data,
             draw_single_frame: draw_single_frame,
@@ -136,6 +140,8 @@ impl Drop for Batch {
     fn drop(&mut self) {
         unsafe {
             gl::DeleteVertexArrays(1, &self.vao);
+            gl::DeleteBuffers(1, &self.vbo);
+            gl::DeleteBuffers(1, &self.ibo);
             gl::DeleteTextures(1, &self.texture);
         }
     }
