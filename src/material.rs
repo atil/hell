@@ -32,25 +32,7 @@ impl Material {
         tobj_mat: tobj::Material,
         projection: Matrix4<f32>,
     ) -> Material {
-        let (mat_type, shader_path) = {
-            if !tobj_mat.diffuse_texture.is_empty() {
-                let texture = texture::load_from_file(
-                    format!("assets/{}", tobj_mat.diffuse_texture).as_str(),
-                );
-
-                (MaterialType::Texture(texture), "src/shaders/triangle.glsl")
-            } else {
-                (
-                    MaterialType::Color(Color {
-                        r: tobj_mat.diffuse[0],
-                        g: tobj_mat.diffuse[1],
-                        b: tobj_mat.diffuse[2],
-                    }),
-                    "src/shaders/color.glsl",
-                )
-            }
-        };
-
+        let (mat_type, shader_path) = get_material_type(&tobj_mat);
         let shader_program =
             Program::from_shader(shader_path).expect("Problem loading world shader");
 
@@ -126,6 +108,24 @@ impl Material {
             m_type: mat_type,
             program: shader_program,
             index_data: index_data,
+        }
+    }
+
+    fn get_material_type(tobj_mat: &tobj::Material) -> (MaterialType, &str) {
+        if !tobj_mat.diffuse_texture.is_empty() {
+            let texture =
+                texture::load_from_file(format!("assets/{}", tobj_mat.diffuse_texture).as_str());
+
+            (MaterialType::Texture(texture), "src/shaders/triangle.glsl")
+        } else {
+            (
+                MaterialType::Color(Color {
+                    r: tobj_mat.diffuse[0],
+                    g: tobj_mat.diffuse[1],
+                    b: tobj_mat.diffuse[2],
+                }),
+                "src/shaders/color.glsl",
+            )
         }
     }
 

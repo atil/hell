@@ -22,8 +22,8 @@ impl Ui<'_> {
         let rekt2 = Rect::new(-0.4, -0.9, 0.2, 0.1);
 
         let batches = vec![
-            Batch::new(vec![rekt1], texture1, false),
-            Batch::new(vec![rekt2], texture2, false),
+            // Batch::new(vec![rekt1], texture1, false),
+            // Batch::new(vec![rekt2], texture2, false),
         ];
 
         unsafe {

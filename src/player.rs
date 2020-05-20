@@ -23,6 +23,7 @@ pub struct Player {
     forward: Vector3<f32>,
     prev_is_grounded: bool,
     gonna_jump: bool,
+    enabled_fly_move: bool,
 }
 
 impl Player {
@@ -33,6 +34,7 @@ impl Player {
             forward: Vector3::new(0.0, 0.0, -1.0),
             prev_is_grounded: false,
             gonna_jump: false,
+            enabled_fly_move: false,
         }
     }
 
@@ -45,6 +47,18 @@ impl Player {
         dt: f32,
     ) {
         mouse_look(&mut self.forward, mouse);
+
+        if keys.get_key_down(Keycode::K) {
+            println!("SWITCH!");
+            self.enabled_fly_move = !self.enabled_fly_move;
+        }
+
+        if self.enabled_fly_move {
+            fly_move(&mut self.position, &self.forward, &keys, dt);
+            return;
+        }
+
+        ui.draw_text("HEY");
 
         if keys.get_key_down(Keycode::Space) {
             self.gonna_jump = true;
@@ -95,7 +109,6 @@ impl Player {
 
         let displacement = resolve_penetration(&collision_objects, self.position);
         self.position += displacement;
-
         self.prev_is_grounded = is_grounded;
 
         if self.position.y < -30.0 {
@@ -104,9 +117,9 @@ impl Player {
             self.position = START_POSITION;
         }
 
-        let velocity_string = format!("{:.3}", horz(&self.velocity).magnitude());
-        // println!("{:?} {:?} {}", self.position, displacement, is_grounded);
-        ui.draw_text(velocity_string.as_str());
+        // let velocity_string = format!("{:.3}", horz(&self.velocity).magnitude());
+        // // println!("{:?} {:?} {}", self.position, displacement, is_grounded);
+        // ui.draw_text(velocity_string.as_str());
     }
 
     pub fn get_view_matrix(&self) -> Matrix4<f32> {
@@ -127,6 +140,34 @@ fn mouse_look(forward: &mut Vector3<f32>, mouse: (f32, f32)) {
     let left = forward.cross(Vector3::unit_y());
     *forward =
         Quaternion::from_axis_angle(left, Rad(-mouse_y) * SENSITIVITY).rotate_vector(*forward);
+}
+
+fn fly_move(position: &mut Point3<f32>, forward: &Vector3<f32>, keys: &Keys, dt: f32) {
+    const FLY_SPEED: f32 = 0.01;
+    let spd = {
+        if keys.get_key(Keycode::LShift) {
+            FLY_SPEED * 2.0
+        } else {
+            FLY_SPEED
+        }
+    };
+    if keys.get_key(Keycode::W) {
+        *position += forward * spd * dt;
+    } else if keys.get_key(Keycode::S) {
+        *position -= forward * spd * dt;
+    }
+
+    if keys.get_key(Keycode::A) {
+        *position -= forward.cross(Vector3::unit_y()) * spd * dt;
+    } else if keys.get_key(Keycode::D) {
+        *position += forward.cross(Vector3::unit_y()) * spd * dt;
+    }
+
+    if keys.get_key(Keycode::Space) {
+        *position += Vector3::unit_y() * spd * dt;
+    } else if keys.get_key(Keycode::LCtrl) {
+        *position -= Vector3::unit_y() * spd * dt;
+    }
 }
 
 fn get_wish_dir(keys: &Keys, forward: Vector3<f32>) -> Vector3<f32> {

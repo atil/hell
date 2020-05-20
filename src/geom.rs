@@ -82,7 +82,8 @@ pub fn project_point_on_triangle_plane(point: Point3<f32>, triangle: Triangle) -
 pub fn is_point_in_triangle(point: Point3<f32>, tri: Triangle) -> bool {
     if Vector3::dot(point - tri.p0, tri.normal).abs() > 0.0001 {
         panic!(format!(
-            "attempted to perform point-triangle check on non-coplanar point-triangle\n {:?}\n {:?}\n {:?}",
+            "attempted to perform point-triangle check on non-coplanar point-triangle\n
+            {:?}\n {:?}\n {:?}",
             point, tri.p0, tri.normal
         ));
     }

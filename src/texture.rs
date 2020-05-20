@@ -55,6 +55,7 @@ pub fn create_from_text(content: &str, size: f32, font: &Font) -> u32 {
         (max_x - min_x) as u32
     };
 
+    // TODO: What are those 40's?
     let mut img = DynamicImage::new_rgba8(glyphs_width + 40, glyphs_height + 40).to_rgba();
     for glyph in glyphs {
         if let Some(bounding_box) = glyph.pixel_bounding_box() {

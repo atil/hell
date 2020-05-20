@@ -3,6 +3,7 @@ use gl::types::*;
 
 const SIZEOF_FLOAT: usize = std::mem::size_of::<f32>();
 
+#[derive(Debug)]
 pub struct Rect {
     left: f32,
     top: f32,
@@ -128,5 +129,14 @@ impl Batch {
             gl::UNSIGNED_INT,
             self.index_data.as_ptr() as *const std::os::raw::c_void,
         );
+    }
+}
+
+impl Drop for Batch {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteVertexArrays(1, &self.vao);
+            gl::DeleteTextures(1, &self.texture);
+        }
     }
 }
