@@ -67,6 +67,8 @@ impl Batch {
             gl::GenBuffers(1, &mut ibo);
             gl::GenVertexArrays(1, &mut vao);
 
+            gl::BindVertexArray(0);
+
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
             gl::BufferData(
                 gl::ARRAY_BUFFER,

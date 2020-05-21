@@ -49,7 +49,6 @@ impl Player {
         mouse_look(&mut self.forward, mouse);
 
         if keys.get_key_down(Keycode::K) {
-            println!("SWITCH!");
             self.enabled_fly_move = !self.enabled_fly_move;
         }
 
@@ -57,8 +56,6 @@ impl Player {
             fly_move(&mut self.position, &self.forward, &keys, dt);
             return;
         }
-
-        ui.draw_text("HEY");
 
         if keys.get_key_down(Keycode::Space) {
             self.gonna_jump = true;
@@ -117,9 +114,9 @@ impl Player {
             self.position = START_POSITION;
         }
 
-        // let velocity_string = format!("{:.3}", horz(&self.velocity).magnitude());
-        // // println!("{:?} {:?} {}", self.position, displacement, is_grounded);
-        // ui.draw_text(velocity_string.as_str());
+        let velocity_string = format!("{:.3}", horz(&self.velocity).magnitude());
+        // println!("{:?} {:?} {}", self.position, displacement, is_grounded);
+        ui.draw_text(velocity_string.as_str());
     }
 
     pub fn get_view_matrix(&self) -> Matrix4<f32> {
