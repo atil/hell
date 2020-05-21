@@ -13,11 +13,16 @@ pub fn load_from_file(texture_path: &str) -> u32 {
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
 
-        let img = image::open(&Path::new(&texture_path)).expect("Error loading the texture");
+        let img = image::open(&Path::new(&texture_path))
+            .expect(format!("Error loading the texture {:?}", texture_path).as_str());
         let img = img.flipv();
         let img_data = img.to_bytes();
         if img.color() != image::ColorType::Rgba8 {
-            panic!("Image channels isn't RGBA8, instead {:?}", img.color());
+            panic!(
+                "Image channels isn't RGBA8, instead {:?} for image file {:?}",
+                img.color(),
+                texture_path
+            );
         }
         gl::TexImage2D(
             gl::TEXTURE_2D,

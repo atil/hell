@@ -17,11 +17,11 @@ pub fn read_vertex_array(mesh: &tobj::Mesh) -> (Vec<f32>, Vec<u32>) {
         // ([v, v, v], [tx, tx])
         .map(|vec_tuple| {
             vec![
-                (vec_tuple.0)[0], // Position
-                (vec_tuple.0)[1], // Position
-                (vec_tuple.0)[2], // Position
-                (vec_tuple.1)[0], // Texcoord
-                (vec_tuple.1)[1], // Texcoord
+                (vec_tuple.0)[0],       // Position
+                (vec_tuple.0)[1],       // Position
+                (vec_tuple.0)[2],       // Position
+                (vec_tuple.1)[0] / 5.0, // Texcoord
+                (vec_tuple.1)[1] / 5.0, // Texcoord
             ]
         })
         .flatten()
