@@ -13,7 +13,7 @@ pub struct Renderer {
     gl_context: sdl2::video::GLContext,
 }
 
-const SCREEN_SIZE: Screen = Screen { x: 800, y: 600 };
+const SCREEN_SIZE: Screen = Screen { x: 1366, y: 768 };
 
 impl Renderer {
     pub fn init(sdl_context: &sdl2::Sdl) -> Self {
@@ -65,4 +65,12 @@ pub fn get_projection_matrix() -> Matrix4<f32> {
         0.1,
         1000.0,
     )
+}
+
+pub unsafe fn check_gl_error(tag: &str) {
+    let error = gl::GetError();
+
+    if error != 0 {
+        println!("[{0}] error: {1}", tag, error);
+    }
 }

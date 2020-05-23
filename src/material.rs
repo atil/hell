@@ -1,7 +1,8 @@
 extern crate tobj;
+use crate::render;
 use crate::shader::*;
 use crate::texture;
-use cgmath::Matrix4;
+use cgmath::*;
 use gl::types::*;
 
 #[derive(Copy, Clone, Debug)]
@@ -33,8 +34,7 @@ impl Material {
         projection: Matrix4<f32>,
     ) -> Material {
         let (mat_type, shader_path) = Material::get_material_type(&tobj_mat);
-        let shader_program =
-            Program::from_shader(shader_path).expect("Problem loading world shader");
+        let program = Program::from_shader(shader_path).expect("Problem loading world shader");
 
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;
@@ -71,7 +71,7 @@ impl Material {
                 3,
                 gl::FLOAT,
                 gl::FALSE,
-                (5 * SIZEOF_FLOAT) as GLsizei,
+                (8 * SIZEOF_FLOAT) as i32,
                 std::ptr::null(),
             );
 
@@ -82,23 +82,42 @@ impl Material {
                 2,
                 gl::FLOAT,
                 gl::FALSE,
-                (5 * SIZEOF_FLOAT) as GLsizei,
+                (8 * SIZEOF_FLOAT) as i32,
                 (3 * SIZEOF_FLOAT) as *const GLvoid,
             );
 
-            match mat_type {
-                MaterialType::Texture(texture_handle) => {
-                    shader_program.set_i32("texture0", texture_handle as i32);
-                }
-                MaterialType::Color(color) => {
-                    shader_program.set_vec3("color0", [color.r, color.g, color.b]);
-                }
-            }
-            // Unbinding
+            // Normals
+            gl::EnableVertexAttribArray(2);
+            gl::VertexAttribPointer(
+                2,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                (8 * SIZEOF_FLOAT) as i32,
+                (5 * SIZEOF_FLOAT) as *const GLvoid,
+            );
+
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
             gl::BindVertexArray(0);
 
-            shader_program.set_matrix("projection", projection);
+            render::check_gl_error("material");
+
+            program.set_used();
+
+            match mat_type {
+                MaterialType::Texture(_) => {
+                    // The uniform needs to be the texture unit, not the handle
+                    program.set_i32("u_texture0", 0);
+
+                    let d = Vector3::new(-1.0, -1.0, 0.0).normalize();
+                    program.set_vec3("u_light_dir", d.x, d.y, d.z);
+                }
+                MaterialType::Color(color) => {
+                    program.set_vec3("color0", color.r, color.g, color.b);
+                }
+            }
+
+            program.set_matrix("u_projection", projection);
         }
 
         Material {
@@ -106,7 +125,7 @@ impl Material {
             ibo: ibo,
             vao: vao,
             m_type: mat_type,
-            program: shader_program,
+            program: program,
             index_data: index_data,
         }
     }
@@ -131,12 +150,18 @@ impl Material {
 
     pub unsafe fn draw(&self, model: Matrix4<f32>, view: Matrix4<f32>) {
         self.program.set_used();
-        self.program.set_matrix("model", model);
-        self.program.set_matrix("view", view);
+
+        // TODO #PERF: This can be done only once for all world materials
+        self.program.set_matrix("u_model", model);
+        self.program.set_matrix("u_view", view);
+        self.program.set_i32("u_texture0", 0);
 
         match self.m_type {
-            MaterialType::Texture(tex) => gl::BindTexture(gl::TEXTURE_2D, tex),
-            MaterialType::Color(c) => self.program.set_vec3("color0", [c.r, c.g, c.b]),
+            MaterialType::Texture(texture_handle) => {
+                gl::ActiveTexture(gl::TEXTURE0);
+                gl::BindTexture(gl::TEXTURE_2D, texture_handle);
+            }
+            MaterialType::Color(c) => self.program.set_vec3("color0", c.r, c.g, c.b),
         }
 
         gl::BindVertexArray(self.vao);

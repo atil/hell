@@ -4,10 +4,11 @@ use rusttype::{point, Font, Scale};
 use std::path::Path;
 
 pub fn load_from_file(texture_path: &str) -> u32 {
-    let mut texture = 0;
+    let mut texture_handle = 0;
     unsafe {
-        gl::GenTextures(1, &mut texture);
-        gl::BindTexture(gl::TEXTURE_2D, texture);
+        gl::GenTextures(1, &mut texture_handle);
+        gl::ActiveTexture(gl::TEXTURE0);
+        gl::BindTexture(gl::TEXTURE_2D, texture_handle);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
@@ -37,7 +38,7 @@ pub fn load_from_file(texture_path: &str) -> u32 {
         );
         gl::GenerateMipmap(gl::TEXTURE_2D);
     }
-    texture
+    texture_handle
 }
 
 pub fn create_from_text(content: &str, size: f32, font: &Font) -> u32 {

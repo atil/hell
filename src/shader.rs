@@ -1,3 +1,4 @@
+use crate::render;
 use cgmath::{Matrix, Matrix4};
 use gl;
 use gl::types::*;
@@ -86,19 +87,33 @@ impl Program {
     pub unsafe fn set_matrix(&self, name: &str, matrix: Matrix4<f32>) {
         let cstr = CString::new(name).unwrap();
         let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
+
         gl::ProgramUniformMatrix4fv(self.id, loc, 1, gl::FALSE, matrix.as_ptr());
+        render::check_gl_error("mat4");
     }
 
     pub unsafe fn set_i32(&self, name: &str, i: i32) {
         let cstr = CString::new(name).unwrap();
         let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
+
         gl::Uniform1i(loc, i);
+        render::check_gl_error("i32");
     }
 
-    pub unsafe fn set_vec3(&self, name: &str, vec: [f32; 3]) {
+    pub unsafe fn set_vec3(&self, name: &str, f1: f32, f2: f32, f3: f32) {
         let cstr = CString::new(name).unwrap();
         let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
-        gl::Uniform3f(loc, vec[0], vec[1], vec[2]);
+
+        gl::Uniform3f(loc, f1, f2, f3);
+        render::check_gl_error("vec3");
+    }
+
+    pub unsafe fn set_vec4(&self, name: &str, vec: [f32; 4]) {
+        let cstr = CString::new(name).unwrap();
+        let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
+
+        gl::Uniform4f(loc, vec[0], vec[1], vec[2], vec[3]);
+        render::check_gl_error("vec4");
     }
 }
 

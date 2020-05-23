@@ -27,6 +27,7 @@ impl Ui<'_> {
         ];
 
         unsafe {
+            program.set_used();
             program.set_i32("texture_ui", 0);
         }
 
@@ -46,7 +47,6 @@ impl Ui<'_> {
 
     pub unsafe fn draw(&mut self) {
         self.program.set_used();
-
         for batch in self.batches.iter() {
             batch.draw();
         }
