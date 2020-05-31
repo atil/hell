@@ -3,12 +3,42 @@ map_Kd GridBox_Default.png
 Kd 1 1 1
 d 1
 
-newmtl Default_Map
-map_Kd default_map.png
-Kd 1 1 1
+newmtl Material5
+Kd 0.05098039 0.05098039 0.05490196
 d 1
 
-newmtl MaterialBrown1
-Kd 0.2088435 0.9528302 0.09438412
-d 1
+newmtl Soil3
+map_Kd Soil3.png
+Kd 1.0 1.0 1.0
+d 1.0
+
+newmtl Wall1
+map_Kd Wall1.png
+Kd 1.0 1.0 1.0
+d 1.0
+
+newmtl Soil2
+map_Kd Soil2.png
+Kd 1.0 1.0 1.0
+d 1.0
+
+newmtl Soil1
+map_Kd Soil1.png
+Kd 1.0 1.0 1.0
+d 1.0
+
+newmtl Metal3
+map_Kd Metal3.png
+Kd 1.0 1.0 1.0
+d 1.0
+
+newmtl Metal1
+map_Kd Metal1.png
+Kd 1.0 1.0 1.0
+d 1.0
+
+newmtl Metal2
+map_Kd Metal2.png
+Kd 1.0 1.0 1.0
+d 1.0
 
