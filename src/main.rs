@@ -10,6 +10,7 @@ use sdl2::keyboard::Keycode;
 mod assets;
 mod geom;
 mod keys;
+mod light;
 mod material;
 mod math;
 mod mesh;

@@ -103,3 +103,44 @@ pub fn create_from_text(content: &str, size: f32, font: &Font) -> u32 {
     }
     texture
 }
+
+pub unsafe fn create_depth_texture() -> u32 {
+    let mut depth_texture_handle = 0;
+    gl::GenTextures(1, &mut depth_texture_handle);
+    gl::BindTexture(gl::TEXTURE_2D, depth_texture_handle);
+    gl::TexParameteri(
+        gl::TEXTURE_2D,
+        gl::TEXTURE_WRAP_S,
+        gl::CLAMP_TO_BORDER as i32,
+    );
+    gl::TexParameteri(
+        gl::TEXTURE_2D,
+        gl::TEXTURE_WRAP_T,
+        gl::CLAMP_TO_BORDER as i32,
+    );
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+
+    let border_color = vec![1.0, 1.0, 1.0, 1.0];
+    gl::TexParameterfv(
+        gl::TEXTURE_2D,
+        gl::TEXTURE_BORDER_COLOR,
+        border_color.as_ptr(),
+    );
+
+    let depth_texture_width = 1024;
+    let depth_texture_height = 1024;
+    gl::TexImage2D(
+        gl::TEXTURE_2D,
+        0,
+        gl::DEPTH_COMPONENT as i32,
+        depth_texture_width as i32,
+        depth_texture_height as i32,
+        0,
+        gl::DEPTH_COMPONENT,
+        gl::FLOAT,
+        std::ptr::null(),
+    );
+
+    depth_texture_handle
+}

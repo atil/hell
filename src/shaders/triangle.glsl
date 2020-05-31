@@ -23,13 +23,36 @@ void main()
 
 #ifdef FRAGMENT
 uniform sampler2D u_texture0;
+uniform sampler2D u_shadowmap;
 uniform vec3 u_light_dir;
+uniform mat4 u_light_v;
+uniform mat4 u_light_p;
 
 in vec3 v2f_frag_world_pos;
 in vec2 v2f_tex_coord;
 in vec3 v2f_normal;
 
 out vec4 out_color;
+
+float shadow_calc(vec4 frag_pos_light_space)
+{
+    // perform perspective divide
+    vec3 proj_coords = frag_pos_light_space.xyz / frag_pos_light_space.w;
+
+    // transform to [0,1] range
+    proj_coords = proj_coords * 0.5 + 0.5;
+
+    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+    float closest_depth = texture(u_shadowmap, proj_coords.xy).r; 
+
+    // get depth of current fragment from light's perspective
+    float current_depth = proj_coords.z;
+
+    // check whether current frag pos is in shadow
+    float shadow = current_depth > closest_depth  ? 1.0 : 0.0;
+
+    return shadow;
+}  
 
 void main()
 {

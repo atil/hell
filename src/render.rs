@@ -1,3 +1,4 @@
+use crate::light::DirectionalLight;
 use crate::object::Object;
 use cgmath::*;
 use gl::types::*;
@@ -35,7 +36,6 @@ impl Renderer {
             gl::Enable(gl::DEPTH_TEST);
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-            gl::Viewport(0, 0, SCREEN_SIZE.x as GLint, SCREEN_SIZE.y as GLint);
             gl::ClearColor(0.1, 0.05, 0.05, 1.0);
         }
 
@@ -45,11 +45,19 @@ impl Renderer {
         }
     }
 
-    pub unsafe fn render(&mut self, objects: &Vec<Object>, view_matrix: Matrix4<f32>) {
-        gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+    pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
+        let light = DirectionalLight::new();
 
+        // gl::Viewport(0, 0, 1024, 1024);
+        // gl::Clear(gl::DEPTH_BUFFER_BIT);
+        // for obj in objects {
+        //     obj.draw(player_v, &light);
+        // }
+
+        gl::Viewport(0, 0, SCREEN_SIZE.x as i32, SCREEN_SIZE.y as i32);
+        gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         for obj in objects {
-            obj.draw(view_matrix);
+            obj.draw(player_v, &light);
         }
     }
 

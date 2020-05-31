@@ -1,3 +1,4 @@
+use crate::light::DirectionalLight;
 use crate::geom::Triangle;
 use crate::material::Material;
 use crate::mesh::Mesh;
@@ -41,7 +42,7 @@ impl<'a> Object<'a> {
         }
     }
 
-    pub unsafe fn draw(&self, view_matrix: Matrix4<f32>) {
-        self.material.draw(self.transform, view_matrix);
+    pub unsafe fn draw(&self, player_v: Matrix4<f32>, directional_light: &DirectionalLight) {
+        self.material.draw(self.transform, player_v, directional_light);
     }
 }
