@@ -17,7 +17,8 @@ pub struct Program {
 
 impl Program {
     pub fn from_shader(path: &str) -> Result<Program, String> {
-        let mut shader_file = File::open(path).expect("Unable to open shader file");
+        let mut shader_file =
+            File::open(path).expect(format!("Unable to open shader file: {}", path).as_str());
         let mut shader_text = String::new();
         shader_file
             .read_to_string(&mut shader_text)

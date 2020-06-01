@@ -1,9 +1,6 @@
 extern crate tobj;
-use crate::light::DirectionalLight;
 use crate::render;
-use crate::shader::*;
 use crate::texture;
-use cgmath::*;
 use gl::types::*;
 
 #[derive(Copy, Clone, Debug)]
@@ -22,32 +19,19 @@ pub struct Material {
     vbo: u32,
     ibo: u32,
     vao: u32,
-    fbo: u32,
     m_type: MaterialType,
-    program: Program,
-    depth_program: Program,
     index_data: Vec<u32>,
 }
 
 impl Material {
-    pub fn new(
-        vertex_data: Vec<f32>,
-        index_data: Vec<u32>,
-        tobj_mat: tobj::Material,
-        projection: Matrix4<f32>,
-    ) -> Material {
-        let (mat_type, shader_path) = get_material_type(&tobj_mat);
-        let program = Program::from_shader(shader_path).expect("Problem loading world shader");
-        let depth_program =
-            Program::from_shader("src/shaders/depth.glsl").expect("Problem loading depth shader");
+    pub fn new(vertex_data: Vec<f32>, index_data: Vec<u32>, tobj_mat: tobj::Material) -> Material {
+        let (mat_type, _shader_path) = get_material_type(&tobj_mat);
 
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;
         let mut vao: GLuint = 0;
-        let mut fbo: GLuint = 0;
 
         unsafe {
-            gl::GenFramebuffers(1, &mut fbo);
             gl::GenBuffers(1, &mut vbo);
             gl::GenBuffers(1, &mut ibo);
             gl::GenVertexArrays(1, &mut vao);
@@ -108,109 +92,24 @@ impl Material {
             gl::BindVertexArray(0);
 
             render::check_gl_error("material");
-
-            program.set_used();
-
-            match mat_type {
-                MaterialType::Texture(_) => {
-                    // The uniform needs to be the texture unit, not the handle
-                    program.set_i32("u_texture0", 0);
-                    program.set_i32("u_shadowmap", 1);
-
-                    let d = Vector3::new(-1.0, -1.0, 0.0).normalize();
-                    program.set_vec3("u_light_dir", d.x, d.y, d.z);
-                }
-                MaterialType::Color(color) => {
-                    program.set_vec3("color0", color.r, color.g, color.b);
-                }
-            }
-
-            // Framebuffer
-            // gl::BindFramebuffer(gl::FRAMEBUFFER, fbo);
-            // let depth_texture_handle = texture::create_depth_texture();
-            // gl::FramebufferTexture2D(
-            //     gl::FRAMEBUFFER,
-            //     gl::DEPTH_ATTACHMENT,
-            //     gl::TEXTURE_2D,
-            //     depth_texture_handle,
-            //     0,
-            // );
-            // gl::ReadBuffer(gl::NONE);
-            // gl::DrawBuffer(gl::NONE);
-            // gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-
-            program.set_matrix("u_projection", projection);
         }
 
         Material {
             vbo: vbo,
             ibo: ibo,
             vao: vao,
-            fbo: fbo,
             m_type: mat_type,
-            program: program,
-            depth_program: depth_program,
             index_data: index_data,
         }
     }
 
-    pub unsafe fn draw_to_depth_buffer(&self, model: Matrix4<f32>, light: &DirectionalLight) {
-        self.depth_program.set_matrix("u_light_v", light.view);
-        self.depth_program.set_matrix("u_light_p", light.projection);
-        self.depth_program.set_matrix("u_light_model", light.model);
-        self.depth_program.set_matrix("u_model", model);
-        gl::Viewport(0, 0, 1024, 1024);
-        gl::BindFramebuffer(gl::FRAMEBUFFER, self.fbo);
-        gl::Clear(gl::DEPTH_BUFFER_BIT);
-        gl::BindVertexArray(self.vao);
-        gl::DrawElements(
-            gl::TRIANGLES,
-            self.index_data.len() as i32,
-            gl::UNSIGNED_INT,
-            self.index_data.as_ptr() as *const std::os::raw::c_void,
-        );
-        gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-    }
-
-    pub unsafe fn draw(&self, model: Matrix4<f32>, view: Matrix4<f32>, light: &DirectionalLight) {
-        // self.depth_program.set_used();
-        // let light_model = Matrix4::from_translation(Vector3::new(100.0, 100.0, 0.0));
-        // let light_view = Matrix4::look_at(
-        //     Point3::new(100.0, 100.0, 0.0),
-        //     Point3::new(0.0, 0.0, 0.0),
-        //     Vector3::unit_y(),
-        // );
-        // let light_projection = cgmath::ortho(-10.0, 10.0, -10.0, 10.0, 0.1, 1000.0);
-        // let light_vp = light_projection * light_view;
-        // self.depth_program.set_matrix("u_light_vp", light_vp);
-        // self.depth_program.set_matrix("u_light_model", light_model);
-        // self.depth_program.set_matrix("u_model", model);
-        // gl::Viewport(0, 0, 1024, 1024);
-        // gl::BindFramebuffer(gl::FRAMEBUFFER, self.fbo);
-        // gl::Clear(gl::DEPTH_BUFFER_BIT);
-        // gl::BindVertexArray(self.vao);
-        // gl::DrawElements(
-        //     gl::TRIANGLES,
-        //     self.index_data.len() as i32,
-        //     gl::UNSIGNED_INT,
-        //     self.index_data.as_ptr() as *const std::os::raw::c_void,
-        // );
-        // gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-        //
-        self.program.set_used();
-        self.program.set_matrix("u_model", model);
-        self.program.set_matrix("u_view", view);
-        self.program.set_matrix("u_light_v", light.view);
-        self.program.set_matrix("u_light_p", light.projection);
-        self.program.set_i32("u_texture0", 0);
-        self.program.set_i32("u_shadowmap", 1);
-
+    pub unsafe fn draw(&self) {
         match self.m_type {
             MaterialType::Texture(texture_handle) => {
                 gl::ActiveTexture(gl::TEXTURE0);
                 gl::BindTexture(gl::TEXTURE_2D, texture_handle);
             }
-            MaterialType::Color(c) => self.program.set_vec3("color0", c.r, c.g, c.b),
+            _ => unreachable!(),
         }
 
         gl::BindVertexArray(self.vao);
@@ -229,7 +128,6 @@ impl Drop for Material {
             gl::DeleteVertexArrays(1, &self.vao);
             gl::DeleteBuffers(1, &self.vbo);
             gl::DeleteBuffers(1, &self.ibo);
-            gl::DeleteFramebuffers(1, &self.fbo);
             if let MaterialType::Texture(texture) = self.m_type {
                 gl::DeleteTextures(1, &texture);
             }

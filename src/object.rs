@@ -1,4 +1,3 @@
-use crate::light::DirectionalLight;
 use crate::geom::Triangle;
 use crate::material::Material;
 use crate::mesh::Mesh;
@@ -8,7 +7,7 @@ pub struct Object<'a> {
     // TODO: Static geometry won't have this as a variable
     // It'll be fed in via the ctor
     pub transform: Matrix4<f32>,
-    material: &'a Material,
+    pub material: &'a Material,
     pub mesh: &'a Mesh,
 
     // This is a list of transformed triangles
@@ -40,9 +39,5 @@ impl<'a> Object<'a> {
         for (i, tri) in self.mesh.triangles.iter().enumerate() {
             self.triangles[i] = tri.transformed_by(self.transform);
         }
-    }
-
-    pub unsafe fn draw(&self, player_v: Matrix4<f32>, directional_light: &DirectionalLight) {
-        self.material.draw(self.transform, player_v, directional_light);
     }
 }

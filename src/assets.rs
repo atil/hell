@@ -2,7 +2,6 @@ use crate::material;
 use crate::material::Material;
 use crate::mesh;
 use crate::mesh::Mesh;
-use crate::render;
 use std::path::Path;
 
 pub fn load_obj(path: &str) -> (Vec<Mesh>, Vec<Material>) {
@@ -19,12 +18,7 @@ pub fn load_obj(path: &str) -> (Vec<Mesh>, Vec<Material>) {
         meshes.push(mesh::Mesh::new(&tobj_model.mesh));
 
         let (vertex_data, index_data) = mesh::read_vertex_array(&tobj_model.mesh);
-        materials.push(material::Material::new(
-            vertex_data,
-            index_data,
-            tobj_mat,
-            render::get_projection_matrix(),
-        ));
+        materials.push(material::Material::new(vertex_data, index_data, tobj_mat));
     }
 
     (meshes, materials)
