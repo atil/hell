@@ -85,7 +85,7 @@ impl Program {
         gl::UseProgram(self.id);
     }
 
-    pub unsafe fn set_matrix(&self, name: &str, matrix: Matrix4<f32>) {
+    pub unsafe fn set_mat4(&self, name: &str, matrix: Matrix4<f32>) {
         let cstr = CString::new(name).unwrap();
         let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
 
@@ -101,19 +101,19 @@ impl Program {
         render::check_gl_error("i32");
     }
 
-    pub unsafe fn set_vec3(&self, name: &str, f1: f32, f2: f32, f3: f32) {
+    pub unsafe fn set_vec3(&self, name: &str, f0: f32, f1: f32, f2: f32) {
         let cstr = CString::new(name).unwrap();
         let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
 
-        gl::Uniform3f(loc, f1, f2, f3);
+        gl::Uniform3f(loc, f0, f1, f2);
         render::check_gl_error("vec3");
     }
 
-    pub unsafe fn set_vec4(&self, name: &str, vec: [f32; 4]) {
+    pub unsafe fn set_vec4(&self, name: &str, f0: f32, f1: f32, f2: f32, f3: f32) {
         let cstr = CString::new(name).unwrap();
         let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
 
-        gl::Uniform4f(loc, vec[0], vec[1], vec[2], vec[3]);
+        gl::Uniform4f(loc, f0, f1, f2, f3);
         render::check_gl_error("vec4");
     }
 }

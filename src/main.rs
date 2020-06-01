@@ -34,9 +34,7 @@ fn main() {
     let mut keys = keys::Keys::new();
     let mut player = player::Player::new();
 
-    // test
-
-    let (meshes, materials) = assets::load_obj("assets/test_parkour.obj");
+    let (meshes, materials) = assets::load_obj("assets/test_lighting.obj");
 
     let mut objects = Vec::new();
     for (mesh, mat) in meshes.iter().zip(materials.iter()) {
