@@ -41,26 +41,28 @@ in vec3 v2f_normal;
 
 out vec4 out_color;
 
-float shadow_calc(vec4 frag_light_space_pos) {
+float shadow_calc(vec4 frag_light_space_pos, vec3 light_dir) {
     vec3 pos = frag_light_space_pos.xyz * 0.5 + 0.5;
     pos.z = min(pos.z, 1.0);
 
     float depth = texture(u_shadowmap, pos.xy).r;
 
-    float bias = 0.005;
+    // If the surface is perpendicular to the light direction
+    // then it needs larger bias values
+    float bias = max(0.0005 * (1.0 - dot(v2f_normal, light_dir)), 0.00005);
+
     return (depth + bias) < pos.z ? 0.0 : 1.0; // 0 if shadowed
 }
 
-void main()
-{
+void main() {
     vec4 tex_color = texture(u_texture0, v2f_tex_coord);
 
-    vec3 light_dir = normalize(u_light_pos);
+    vec3 light_dir = normalize(u_light_pos - v2f_frag_world_pos);
 
     float diff = max(dot(v2f_normal, light_dir), 0.0);
     tex_color = vec4(tex_color.rgb * (diff + 0.1), 1.0);
 
-    float shadow = shadow_calc(v2f_frag_light_space_pos);
+    float shadow = shadow_calc(v2f_frag_light_space_pos, light_dir);
     vec4 shadowed_tex_color = vec4(tex_color.rgb * 0.2, 1.0);
 
     out_color = (1.0 - shadow) * shadowed_tex_color + shadow * tex_color;
