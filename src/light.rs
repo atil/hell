@@ -10,7 +10,7 @@ pub struct DirectionalLight {
 impl DirectionalLight {
     pub fn new() -> DirectionalLight {
         let s = 100.0;
-        let pos = Point3::new(-100.0, 100.0, 0.0);
+        let pos = Point3::new(-100.0, 100.0, 20.0);
         DirectionalLight {
             position: pos,
             view: Matrix4::look_at(pos, Point3::new(0.0, 0.0, 0.0), Vector3::unit_y()),

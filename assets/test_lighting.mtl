@@ -3,6 +3,11 @@ map_Kd GridBox_Default.png
 Kd 1 1 1
 d 1
 
+newmtl Soil2
+map_Kd Soil2.png
+Kd 1.0 1.0 1.0
+d 1.0
+
 newmtl Soil3
 map_Kd Soil3.png
 Kd 1.0 1.0 1.0
@@ -13,28 +18,8 @@ map_Kd Wall1.png
 Kd 1.0 1.0 1.0
 d 1.0
 
-newmtl Soil2
-map_Kd Soil2.png
-Kd 1.0 1.0 1.0
-d 1.0
-
-newmtl Soil1
-map_Kd Soil1.png
-Kd 1.0 1.0 1.0
-d 1.0
-
 newmtl Metal3
 map_Kd Metal3.png
-Kd 1.0 1.0 1.0
-d 1.0
-
-newmtl Metal1
-map_Kd Metal1.png
-Kd 1.0 1.0 1.0
-d 1.0
-
-newmtl Metal2
-map_Kd Metal2.png
 Kd 1.0 1.0 1.0
 d 1.0
 
