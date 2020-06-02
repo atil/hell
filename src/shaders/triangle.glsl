@@ -41,6 +41,8 @@ in vec3 v2f_normal;
 
 out vec4 out_color;
 
+#define SAMPLE_SIZE 2
+
 float shadow_calc(vec4 frag_light_space_pos, vec3 light_dir) {
     vec3 pos = frag_light_space_pos.xyz * 0.5 + 0.5;
     pos.z = min(pos.z, 1.0);
@@ -51,7 +53,17 @@ float shadow_calc(vec4 frag_light_space_pos, vec3 light_dir) {
     // then it needs larger bias values
     float bias = max(0.0005 * (1.0 - dot(v2f_normal, light_dir)), 0.00005);
 
-    return (depth + bias) < pos.z ? 0.0 : 1.0; // 0 if shadowed
+    float shadow = 0.0;
+    vec2 texel_size = 1.0 / textureSize(u_shadowmap, 0);
+    for(int x = -SAMPLE_SIZE; x <= SAMPLE_SIZE; x++) {
+        for(int y = -SAMPLE_SIZE; y <= SAMPLE_SIZE; y++) {
+            float pcf_depth = texture(u_shadowmap, pos.xy + vec2(x, y) * texel_size).r; 
+            shadow += (pcf_depth + bias * 2) < pos.z ? 0.0 : 1.0;
+        }    
+    }
+    return shadow / ((SAMPLE_SIZE + 2) * (SAMPLE_SIZE + 2));
+
+    // return (depth + bias) < pos.z ? 0.0 : 1.0; // 0 if shadowed
 }
 
 void main() {

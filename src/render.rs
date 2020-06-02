@@ -21,6 +21,7 @@ pub struct Renderer {
 }
 
 const SCREEN_SIZE: Screen = Screen { x: 1366, y: 768 };
+pub const SHADOWMAP_SIZE: i32 = 1024;
 
 impl Renderer {
     pub fn init(sdl_context: &sdl2::Sdl) -> Self {
@@ -121,7 +122,7 @@ impl Renderer {
     pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
         // Rendering to depth buffer
         self.depth_shader.set_used();
-        gl::Viewport(0, 0, 1024, 1024);
+        gl::Viewport(0, 0, SHADOWMAP_SIZE, SHADOWMAP_SIZE);
         gl::BindFramebuffer(gl::FRAMEBUFFER, self.depth_fbo);
         gl::Clear(gl::DEPTH_BUFFER_BIT);
         for obj in objects {

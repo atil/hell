@@ -1,4 +1,5 @@
 use gl::types::*;
+use crate::render;
 use image::{DynamicImage, GenericImageView, Rgba};
 use rusttype::{point, Font, Scale};
 use std::path::Path;
@@ -128,14 +129,12 @@ pub unsafe fn create_depth_texture() -> u32 {
         border_color.as_ptr(),
     );
 
-    let depth_texture_width = 1024;
-    let depth_texture_height = 1024;
     gl::TexImage2D(
         gl::TEXTURE_2D,
         0,
         gl::DEPTH_COMPONENT as i32,
-        depth_texture_width as i32,
-        depth_texture_height as i32,
+        render::SHADOWMAP_SIZE as i32,
+        render::SHADOWMAP_SIZE as i32,
         0,
         gl::DEPTH_COMPONENT,
         gl::FLOAT,
