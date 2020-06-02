@@ -13,9 +13,10 @@ struct Screen {
 pub struct Renderer {
     window: sdl2::video::Window,
     gl_context: sdl2::video::GLContext,
-    world_program: Program,
+
+    world_shader: Shader,
     depth_fbo: u32,
-    depth_program: Program,
+    depth_shader: Shader,
     light: DirectionalLight,
 }
 
@@ -70,39 +71,39 @@ impl Renderer {
 
         let light = DirectionalLight::new();
 
-        let world_program = Program::from_shader("src/shaders/triangle.glsl")
+        let world_shader = Shader::from_file("src/shaders/triangle.glsl")
             .expect("Problem loading world shader");
         unsafe {
-            world_program.set_used();
-            world_program.set_i32("u_texture0", 0);
-            world_program.set_i32("u_shadowmap", 1);
-            world_program.set_vec3(
+            world_shader.set_used();
+            world_shader.set_i32("u_texture0", 0);
+            world_shader.set_i32("u_shadowmap", 1);
+            world_shader.set_vec3(
                 "u_light_pos",
                 light.position.x,
                 light.position.y,
                 light.position.z,
             );
-            world_program.set_mat4("u_light_v", light.view);
-            world_program.set_mat4("u_light_p", light.projection);
-            world_program.set_vec4(
+            world_shader.set_mat4("u_light_v", light.view);
+            world_shader.set_mat4("u_light_p", light.projection);
+            world_shader.set_vec4(
                 "u_light_color",
                 light.color.x,
                 light.color.y,
                 light.color.z,
                 light.color.w,
             );
-            world_program.set_mat4("u_projection", projection);
+            world_shader.set_mat4("u_projection", projection);
 
             gl::ActiveTexture(gl::TEXTURE1);
             gl::BindTexture(gl::TEXTURE_2D, depth_texture_handle);
         }
 
-        let depth_program =
-            Program::from_shader("src/shaders/depth.glsl").expect("Problem loading depth shader");
+        let depth_shader =
+            Shader::from_file("src/shaders/depth.glsl").expect("Problem loading depth shader");
         unsafe {
-            depth_program.set_used();
-            depth_program.set_mat4("u_light_v", light.view);
-            depth_program.set_mat4("u_light_p", light.projection);
+            depth_shader.set_used();
+            depth_shader.set_mat4("u_light_v", light.view);
+            depth_shader.set_mat4("u_light_p", light.projection);
             gl::ActiveTexture(gl::TEXTURE0);
             gl::BindTexture(gl::TEXTURE_2D, depth_texture_handle);
         }
@@ -111,31 +112,31 @@ impl Renderer {
             window: window,
             gl_context: gl_context,
             depth_fbo: depth_fbo,
-            depth_program: depth_program,
-            world_program: world_program,
+            depth_shader: depth_shader,
+            world_shader: world_shader,
             light: light,
         }
     }
 
     pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
         // Rendering to depth buffer
-        self.depth_program.set_used();
+        self.depth_shader.set_used();
         gl::Viewport(0, 0, 1024, 1024);
         gl::BindFramebuffer(gl::FRAMEBUFFER, self.depth_fbo);
         gl::Clear(gl::DEPTH_BUFFER_BIT);
         for obj in objects {
-            self.depth_program.set_mat4("u_model", obj.transform);
+            self.depth_shader.set_mat4("u_model", obj.transform);
             obj.material.draw();
         }
         gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
 
         // Rendering to screen
-        self.world_program.set_used();
-        self.world_program.set_mat4("u_view", player_v);
+        self.world_shader.set_used();
+        self.world_shader.set_mat4("u_view", player_v);
         gl::Viewport(0, 0, SCREEN_SIZE.x as i32, SCREEN_SIZE.y as i32);
         gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         for obj in objects {
-            self.world_program.set_mat4("u_model", obj.transform);
+            self.world_shader.set_mat4("u_model", obj.transform);
             obj.material.draw();
         }
     }

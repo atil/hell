@@ -5,7 +5,7 @@ use rusttype::Font;
 
 pub struct Ui<'a> {
     batches: Vec<Batch>,
-    program: Program,
+    shader: Shader,
     font: Font<'a>,
 }
 
@@ -16,7 +16,7 @@ impl Ui<'_> {
         let texture1 = texture::load_from_file("assets/prototype.png");
         let texture2 = texture::create_from_text("Progress", 32.0, &font);
 
-        let program = Program::from_shader("src/shaders/ui.glsl").expect("Error loading ui shader");
+        let shader = Shader::from_file("src/shaders/ui.glsl").expect("Error loading ui shader");
 
         let rekt1 = Rect::new(-0.01, 0.01, 0.02, 0.02);
         let rekt2 = Rect::new(-0.4, -0.9, 0.2, 0.1);
@@ -27,13 +27,13 @@ impl Ui<'_> {
         ];
 
         unsafe {
-            program.set_used();
-            program.set_i32("texture_ui", 0);
+            shader.set_used();
+            shader.set_i32("texture_ui", 0);
         }
 
         Self {
             batches: batches,
-            program: program,
+            shader: shader,
             font: font,
         }
     }
@@ -46,7 +46,7 @@ impl Ui<'_> {
     }
 
     pub unsafe fn draw(&mut self) {
-        self.program.set_used();
+        self.shader.set_used();
         for batch in self.batches.iter() {
             batch.draw();
         }

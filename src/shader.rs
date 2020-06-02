@@ -11,12 +11,12 @@ const VERSION: &'static str = "#version 420 core\r\n";
 const DEFINE_VERTEX: &'static str = "#define VERTEX\r\n";
 const DEFINE_FRAGMENT: &'static str = "#define FRAGMENT\r\n";
 
-pub struct Program {
-    id: gl::types::GLuint,
+pub struct Shader {
+    id: u32,
 }
 
-impl Program {
-    pub fn from_shader(path: &str) -> Result<Program, String> {
+impl Shader {
+    pub fn from_file(path: &str) -> Result<Shader, String> {
         let mut shader_file =
             File::open(path).expect(format!("Unable to open shader file: {}", path).as_str());
         let mut shader_text = String::new();
@@ -24,23 +24,23 @@ impl Program {
             .read_to_string(&mut shader_text)
             .expect("Unable to read shader file");
 
-        let program_id = unsafe { gl::CreateProgram() };
-        let vert_id = Program::create_shader(&shader_text, gl::VERTEX_SHADER, DEFINE_VERTEX)?;
-        let frag_id = Program::create_shader(&shader_text, gl::FRAGMENT_SHADER, DEFINE_FRAGMENT)?;
+        let shader_id = unsafe { gl::CreateProgram() };
+        let vert_id = Shader::from_source(&shader_text, gl::VERTEX_SHADER, DEFINE_VERTEX)?;
+        let frag_id = Shader::from_source(&shader_text, gl::FRAGMENT_SHADER, DEFINE_FRAGMENT)?;
         unsafe {
             let mut success: GLint = 1;
-            gl::AttachShader(program_id, vert_id);
-            gl::AttachShader(program_id, frag_id);
-            gl::LinkProgram(program_id);
-            gl::GetProgramiv(program_id, gl::LINK_STATUS, &mut success);
+            gl::AttachShader(shader_id, vert_id);
+            gl::AttachShader(shader_id, frag_id);
+            gl::LinkProgram(shader_id);
+            gl::GetProgramiv(shader_id, gl::LINK_STATUS, &mut success);
 
             if success == 0 {
-                let mut len: GLint = 0;
-                gl::GetProgramiv(program_id, gl::INFO_LOG_LENGTH, &mut len);
+                let mut len: i32 = 0;
+                gl::GetProgramiv(shader_id, gl::INFO_LOG_LENGTH, &mut len);
 
                 let error = create_whitespace_cstring_with_len(len as usize);
                 gl::GetProgramInfoLog(
-                    program_id,
+                    shader_id,
                     len,
                     std::ptr::null_mut(),
                     error.as_ptr() as *mut GLchar,
@@ -49,14 +49,14 @@ impl Program {
                 return Err(error.to_string_lossy().into_owned());
             }
 
-            gl::DetachShader(program_id, vert_id);
-            gl::DetachShader(program_id, frag_id);
+            gl::DetachShader(shader_id, vert_id);
+            gl::DetachShader(shader_id, frag_id);
         }
 
-        Ok(Program { id: program_id })
+        Ok(Shader { id: shader_id })
     }
 
-    fn create_shader(source: &str, shader_type: GLenum, define: &str) -> Result<GLuint, String> {
+    fn from_source(source: &str, shader_type: GLenum, define: &str) -> Result<GLuint, String> {
         let id = unsafe { gl::CreateShader(shader_type) };
         let mut success: GLint = 1;
 
@@ -118,7 +118,7 @@ impl Program {
     }
 }
 
-impl Drop for Program {
+impl Drop for Shader {
     fn drop(&mut self) {
         unsafe {
             gl::DeleteProgram(self.id);
