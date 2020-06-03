@@ -21,7 +21,7 @@ pub struct Renderer {
 }
 
 const SCREEN_SIZE: Screen = Screen { x: 1366, y: 768 };
-pub const SHADOWMAP_SIZE: i32 = 1024;
+pub const SHADOWMAP_SIZE: i32 = 2048;
 
 impl Renderer {
     pub fn init(sdl_context: &sdl2::Sdl) -> Self {
