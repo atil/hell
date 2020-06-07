@@ -96,7 +96,7 @@ impl Renderer {
             );
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
 
-            skybox_cubemap_handle = texture::load_cubemap_from_file("assets/skybox/weltraum");
+            skybox_cubemap_handle = texture::load_cubemap_from_file("assets/skybox/gehenna");
         }
 
         let projection = cgmath::perspective(

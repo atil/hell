@@ -5,3 +5,4 @@ Textures:
 - https://opengameart.org/content/100-seamless-textures
 Skybox:
 - Weltraum: https://opengameart.org/content/space-skybox
+- Kothic skyboxes: https://www.quaddicted.com/webarchive/kell.quaddicted.com/skyboxes.html
