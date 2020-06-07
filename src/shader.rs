@@ -90,7 +90,7 @@ impl Shader {
         let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
 
         gl::ProgramUniformMatrix4fv(self.id, loc, 1, gl::FALSE, matrix.as_ptr());
-        render::check_gl_error("mat4");
+        render::check_gl_error(format!("{} mat4", name).as_str());
     }
 
     pub unsafe fn set_i32(&self, name: &str, i: i32) {
@@ -98,7 +98,7 @@ impl Shader {
         let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
 
         gl::Uniform1i(loc, i);
-        render::check_gl_error("i32");
+        render::check_gl_error(format!("{} i32", name).as_str());
     }
 
     pub unsafe fn set_vec3(&self, name: &str, f0: f32, f1: f32, f2: f32) {
@@ -106,7 +106,7 @@ impl Shader {
         let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
 
         gl::Uniform3f(loc, f0, f1, f2);
-        render::check_gl_error("vec3");
+        render::check_gl_error(format!("{} vec3", name).as_str());
     }
 
     pub unsafe fn set_vec4(&self, name: &str, f0: f32, f1: f32, f2: f32, f3: f32) {
@@ -114,7 +114,7 @@ impl Shader {
         let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
 
         gl::Uniform4f(loc, f0, f1, f2, f3);
-        render::check_gl_error("vec4");
+        render::check_gl_error(format!("{} vec4", name).as_str());
     }
 }
 

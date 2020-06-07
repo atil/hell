@@ -25,19 +25,19 @@ impl<'a> Object<'a> {
         }
     }
 
-    pub fn translate(&mut self, displacement: Vector3<f32>) {
-        self.transform = self.transform * Matrix4::from_translation(displacement);
+    // pub fn translate(&mut self, displacement: Vector3<f32>) {
+    //     self.transform = self.transform * Matrix4::from_translation(displacement);
 
-        for (i, tri) in self.mesh.triangles.iter().enumerate() {
-            self.triangles[i] = tri.transformed_by(self.transform);
-        }
-    }
+    //     for (i, tri) in self.mesh.triangles.iter().enumerate() {
+    //         self.triangles[i] = tri.transformed_by(self.transform);
+    //     }
+    // }
 
-    pub fn rotate(&mut self, axis: Vector3<f32>, angle: f32) {
-        self.transform = self.transform * Matrix4::from_axis_angle(axis, Deg(angle));
+    // pub fn rotate(&mut self, axis: Vector3<f32>, angle: f32) {
+    //     self.transform = self.transform * Matrix4::from_axis_angle(axis, Deg(angle));
 
-        for (i, tri) in self.mesh.triangles.iter().enumerate() {
-            self.triangles[i] = tri.transformed_by(self.transform);
-        }
-    }
+    //     for (i, tri) in self.mesh.triangles.iter().enumerate() {
+    //         self.triangles[i] = tri.transformed_by(self.transform);
+    //     }
+    // }
 }

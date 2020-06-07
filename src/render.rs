@@ -3,6 +3,7 @@ use crate::object::Object;
 use crate::shader::*;
 use crate::texture;
 use cgmath::*;
+use gl::types::*;
 
 struct Screen {
     x: u32,
@@ -18,6 +19,10 @@ pub struct Renderer {
     depth_fbo: u32,
     depth_shader: Shader,
     light: DirectionalLight,
+
+    skybox_vao: u32,
+    skybox_shader: Shader,
+    skybox_cubemap_handle: u32,
 }
 
 const SCREEN_SIZE: Screen = Screen { x: 1366, y: 768 };
@@ -41,6 +46,8 @@ impl Renderer {
 
         let mut depth_fbo: u32 = 0;
         let depth_texture_handle: u32;
+        let mut skybox_vao: u32 = 0;
+        let skybox_cubemap_handle: u32;
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
             gl::Enable(gl::BLEND);
@@ -61,6 +68,35 @@ impl Renderer {
             gl::ReadBuffer(gl::NONE);
             gl::DrawBuffer(gl::NONE);
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+
+            // Skybox
+            let mut skybox_vbo = 0;
+            let skybox_vertex_data = skybox_vertex_data();
+            const SIZEOF_FLOAT: usize = std::mem::size_of::<f32>();
+            gl::GenBuffers(1, &mut skybox_vbo);
+            gl::GenVertexArrays(1, &mut skybox_vao);
+            gl::BindBuffer(gl::ARRAY_BUFFER, skybox_vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (skybox_vertex_data.len() * SIZEOF_FLOAT) as GLsizeiptr,
+                skybox_vertex_data.as_ptr() as *const GLvoid,
+                gl::STATIC_DRAW,
+            );
+
+            gl::BindVertexArray(skybox_vao);
+            gl::BindBuffer(gl::ARRAY_BUFFER, skybox_vbo);
+            gl::EnableVertexAttribArray(0);
+            gl::VertexAttribPointer(
+                0,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                (3 * SIZEOF_FLOAT) as i32,
+                std::ptr::null(),
+            );
+            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+
+            skybox_cubemap_handle = texture::load_cubemap_from_file("assets/skybox/weltraum");
         }
 
         let projection = cgmath::perspective(
@@ -72,8 +108,8 @@ impl Renderer {
 
         let light = DirectionalLight::new();
 
-        let world_shader = Shader::from_file("src/shaders/triangle.glsl")
-            .expect("Problem loading world shader");
+        let world_shader =
+            Shader::from_file("src/shaders/triangle.glsl").expect("Problem loading world shader");
         unsafe {
             world_shader.set_used();
             world_shader.set_i32("u_texture0", 0);
@@ -109,6 +145,15 @@ impl Renderer {
             gl::BindTexture(gl::TEXTURE_2D, depth_texture_handle);
         }
 
+        let skybox_shader =
+            Shader::from_file("src/shaders/skybox.glsl").expect("Problem loading skybox shader");
+
+        unsafe {
+            skybox_shader.set_used();
+            skybox_shader.set_mat4("u_projection", projection);
+            skybox_shader.set_i32("u_skybox", 0);
+        }
+
         Self {
             window: window,
             gl_context: gl_context,
@@ -116,6 +161,9 @@ impl Renderer {
             depth_shader: depth_shader,
             world_shader: world_shader,
             light: light,
+            skybox_shader: skybox_shader,
+            skybox_vao: skybox_vao,
+            skybox_cubemap_handle: skybox_cubemap_handle,
         }
     }
 
@@ -140,6 +188,18 @@ impl Renderer {
             self.world_shader.set_mat4("u_model", obj.transform);
             obj.material.draw();
         }
+
+        // Skybox
+        self.skybox_shader.set_used();
+        gl::DepthFunc(gl::LEQUAL);
+        let skybox_view = Matrix4::from_cols(player_v.x, player_v.y, player_v.z, Vector4::zero());
+        self.skybox_shader.set_mat4("u_view", skybox_view);
+        gl::BindVertexArray(self.skybox_vao);
+        gl::ActiveTexture(gl::TEXTURE0);
+        gl::BindTexture(gl::TEXTURE_CUBE_MAP, self.skybox_cubemap_handle);
+        gl::DrawArrays(gl::TRIANGLES, 0, 36);
+        gl::BindVertexArray(0);
+        gl::DepthFunc(gl::LESS);
     }
 
     pub fn finish_render(&mut self) {
@@ -153,4 +213,16 @@ pub unsafe fn check_gl_error(tag: &str) {
     if error != 0 {
         println!("[{0}] error: {1}", tag, error);
     }
+}
+
+fn skybox_vertex_data() -> Vec<f32> {
+    vec![
+        -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0,
+        1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0,
+        1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0,
+        1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
+    ]
 }

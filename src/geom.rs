@@ -22,20 +22,20 @@ impl Triangle {
         }
     }
 
-    pub fn transformed_by(&self, m: Matrix4<f32>) -> Triangle {
-        let p0 = m.transform_point(self.p0);
-        let p1 = m.transform_point(self.p1);
-        let p2 = m.transform_point(self.p2);
-        let c = Vector3::cross(self.p1 - self.p0, self.p2 - self.p0);
+    // pub fn transformed_by(&self, m: Matrix4<f32>) -> Triangle {
+    //     let p0 = m.transform_point(self.p0);
+    //     let p1 = m.transform_point(self.p1);
+    //     let p2 = m.transform_point(self.p2);
+    //     let c = Vector3::cross(self.p1 - self.p0, self.p2 - self.p0);
 
-        Triangle {
-            p0: p0,
-            p1: p1,
-            p2: p2,
-            normal: c.normalize(),
-            area: self.area,
-        }
-    }
+    //     Triangle {
+    //         p0: p0,
+    //         p1: p1,
+    //         p2: p2,
+    //         normal: c.normalize(),
+    //         area: self.area,
+    //     }
+    // }
 }
 
 impl std::fmt::Display for Triangle {
