@@ -14,6 +14,9 @@ out vec4 v2f_frag_light_space_pos;
 out vec2 v2f_tex_coord;
 out vec3 v2f_normal;
 
+#define JITTER_EFFECT
+#define JITTER_RESOLUTION vec2(160, 120)
+#
 void main()
 {
     v2f_frag_world_pos = vec3(u_model * vec4(in_position, 1.0));
@@ -22,7 +25,16 @@ void main()
     v2f_normal = normalize(mat3(transpose(inverse(u_model))) * in_normal);  
 
     v2f_tex_coord = in_tex_coord;
-    gl_Position = u_projection * u_view * u_model * vec4(in_position, 1.0);
+
+    vec4 clip_pos = u_projection * u_view * u_model * vec4(in_position, 1.0);
+
+#ifdef JITTER_EFFECT
+    clip_pos.xyz = clip_pos.xyz / clip_pos.w; // clip space -> NDC
+    clip_pos.xy = floor(JITTER_RESOLUTION * clip_pos.xy) / JITTER_RESOLUTION;
+    clip_pos.xyz *= clip_pos.w; // NDC -> clip space
+#endif
+
+    gl_Position = clip_pos;
 }
 #endif
 
@@ -58,12 +70,10 @@ float shadow_calc(vec4 frag_light_space_pos, vec3 light_dir) {
     for(int x = -SAMPLE_SIZE; x <= SAMPLE_SIZE; x++) {
         for(int y = -SAMPLE_SIZE; y <= SAMPLE_SIZE; y++) {
             float pcf_depth = texture(u_shadowmap, pos.xy + vec2(x, y) * texel_size).r; 
-            shadow += (pcf_depth + bias) < pos.z ? 0.0 : 1.0;
+            shadow += (pcf_depth + bias) < pos.z ? 0.0 : 1.0; // 0 if shadowed
         }    
     }
     return shadow / ((SAMPLE_SIZE + 2) * (SAMPLE_SIZE + 2));
-
-    // return (depth + bias) < pos.z ? 0.0 : 1.0; // 0 if shadowed
 }
 
 void main() {

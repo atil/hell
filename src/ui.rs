@@ -1,3 +1,4 @@
+use crate::render;
 use crate::shader::*;
 use crate::texture;
 use crate::ui_batch::*;
@@ -47,6 +48,14 @@ impl Ui<'_> {
 
     pub unsafe fn draw(&mut self) {
         self.shader.set_used();
+
+        gl::Viewport(
+            0,
+            0,
+            render::SCREEN_SIZE.0 as i32,
+            render::SCREEN_SIZE.1 as i32,
+        );
+
         for batch in self.batches.iter() {
             batch.draw();
         }

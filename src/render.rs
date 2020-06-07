@@ -5,10 +5,10 @@ use crate::texture;
 use cgmath::*;
 use gl::types::*;
 
-struct Screen {
-    x: u32,
-    y: u32,
-}
+pub const SCREEN_SIZE: (u32, u32) = (1280, 720);
+pub const SHADOWMAP_SIZE: i32 = 2048;
+pub const DRAW_FRAMEBUFFER_SIZE: (u32, u32) = (640, 360);
+const SIZEOF_FLOAT: usize = std::mem::size_of::<f32>();
 
 #[allow(dead_code)] // The glContext needs to be kept alive, even though not being read
 pub struct Renderer {
@@ -23,10 +23,9 @@ pub struct Renderer {
     skybox_vao: u32,
     skybox_shader: Shader,
     skybox_cubemap_handle: u32,
-}
 
-const SCREEN_SIZE: Screen = Screen { x: 1366, y: 768 };
-pub const SHADOWMAP_SIZE: i32 = 2048;
+    draw_fbo: u32,
+}
 
 impl Renderer {
     pub fn init(sdl_context: &sdl2::Sdl) -> Self {
@@ -35,7 +34,7 @@ impl Renderer {
         gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
         gl_attr.set_context_version(4, 1);
         let window = sdl_video
-            .window("Progress.", SCREEN_SIZE.x, SCREEN_SIZE.y)
+            .window("Progress.", SCREEN_SIZE.0, SCREEN_SIZE.1)
             .opengl()
             .resizable()
             .build()
@@ -72,7 +71,6 @@ impl Renderer {
             // Skybox
             let mut skybox_vbo = 0;
             let skybox_vertex_data = skybox_vertex_data();
-            const SIZEOF_FLOAT: usize = std::mem::size_of::<f32>();
             gl::GenBuffers(1, &mut skybox_vbo);
             gl::GenVertexArrays(1, &mut skybox_vao);
             gl::BindBuffer(gl::ARRAY_BUFFER, skybox_vbo);
@@ -101,7 +99,7 @@ impl Renderer {
 
         let projection = cgmath::perspective(
             cgmath::Deg(45.0),
-            SCREEN_SIZE.x as f32 / SCREEN_SIZE.y as f32,
+            SCREEN_SIZE.0 as f32 / SCREEN_SIZE.1 as f32,
             0.1,
             1000.0,
         );
@@ -141,7 +139,7 @@ impl Renderer {
             depth_shader.set_used();
             depth_shader.set_mat4("u_light_v", light.view);
             depth_shader.set_mat4("u_light_p", light.projection);
-            gl::ActiveTexture(gl::TEXTURE0);
+            gl::ActiveTexture(gl::TEXTURE0); // TODO: Is this necessary here?
             gl::BindTexture(gl::TEXTURE_2D, depth_texture_handle);
         }
 
@@ -154,16 +152,91 @@ impl Renderer {
             skybox_shader.set_i32("u_skybox", 0);
         }
 
+        // Drawing backbuffer
+        let mut draw_fbo = 0;
+        unsafe {
+            gl::GenFramebuffers(1, &mut draw_fbo);
+            gl::BindFramebuffer(gl::FRAMEBUFFER, draw_fbo);
+            let _draw_target_texture_handle = texture::create_draw_target_texture();
+
+            let mut draw_rbo = 0;
+            gl::GenRenderbuffers(1, &mut draw_rbo);
+            gl::BindRenderbuffer(gl::RENDERBUFFER, draw_rbo);
+            gl::RenderbufferStorage(
+                gl::RENDERBUFFER,
+                gl::DEPTH24_STENCIL8,
+                DRAW_FRAMEBUFFER_SIZE.0 as i32,
+                DRAW_FRAMEBUFFER_SIZE.1 as i32,
+            );
+            gl::FramebufferRenderbuffer(
+                gl::FRAMEBUFFER,
+                gl::DEPTH_STENCIL_ATTACHMENT,
+                gl::RENDERBUFFER,
+                draw_rbo,
+            );
+
+            let err = gl::CheckFramebufferStatus(gl::FRAMEBUFFER);
+            if err != gl::FRAMEBUFFER_COMPLETE {
+                println!("Problem while doing framebuffer stuff: {}", err);
+            }
+            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+        }
+
+        // Screen quad
+        let mut screen_quad_vao = 0;
+        unsafe {
+            let mut screen_quad_vbo = 0;
+            gl::GenVertexArrays(1, &mut screen_quad_vao);
+            gl::GenBuffers(1, &mut screen_quad_vbo);
+
+            gl::BindVertexArray(screen_quad_vao);
+            gl::BindBuffer(gl::ARRAY_BUFFER, screen_quad_vbo);
+            let screen_quad_vertex_data = screen_quad_vertex_data();
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (screen_quad_vertex_data.len() * SIZEOF_FLOAT) as GLsizeiptr,
+                screen_quad_vertex_data.as_ptr() as *const GLvoid,
+                gl::STATIC_DRAW,
+            );
+            // Position
+            gl::EnableVertexAttribArray(0);
+            gl::VertexAttribPointer(
+                0,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                (4 * SIZEOF_FLOAT) as i32,
+                std::ptr::null(),
+            );
+
+            // Texcoord
+            gl::EnableVertexAttribArray(1);
+            gl::VertexAttribPointer(
+                1,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                (4 * SIZEOF_FLOAT) as i32,
+                (2 * SIZEOF_FLOAT) as *const GLvoid,
+            );
+
+            check_gl_error("screen_quad");
+        }
+
         Self {
             window: window,
             gl_context: gl_context,
+            world_shader: world_shader,
+
+            light: light,
             depth_fbo: depth_fbo,
             depth_shader: depth_shader,
-            world_shader: world_shader,
-            light: light,
+
             skybox_shader: skybox_shader,
             skybox_vao: skybox_vao,
             skybox_cubemap_handle: skybox_cubemap_handle,
+
+            draw_fbo: draw_fbo,
         }
     }
 
@@ -179,10 +252,16 @@ impl Renderer {
         }
         gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
 
-        // Rendering to screen
+        // Rendering to backbuffer
+        gl::BindFramebuffer(gl::FRAMEBUFFER, self.draw_fbo);
         self.world_shader.set_used();
         self.world_shader.set_mat4("u_view", player_v);
-        gl::Viewport(0, 0, SCREEN_SIZE.x as i32, SCREEN_SIZE.y as i32);
+        gl::Viewport(
+            0,
+            0,
+            DRAW_FRAMEBUFFER_SIZE.0 as i32,
+            DRAW_FRAMEBUFFER_SIZE.1 as i32,
+        );
         gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         for obj in objects {
             self.world_shader.set_mat4("u_model", obj.transform);
@@ -200,6 +279,22 @@ impl Renderer {
         gl::DrawArrays(gl::TRIANGLES, 0, 36);
         gl::BindVertexArray(0);
         gl::DepthFunc(gl::LESS);
+
+        // Render to screen quad
+        gl::BindFramebuffer(gl::READ_FRAMEBUFFER, self.draw_fbo);
+        gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, 0);
+        gl::BlitFramebuffer(
+            0,
+            0,
+            DRAW_FRAMEBUFFER_SIZE.0 as i32,
+            DRAW_FRAMEBUFFER_SIZE.1 as i32,
+            0,
+            0,
+            SCREEN_SIZE.0 as i32,
+            SCREEN_SIZE.1 as i32,
+            gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT,
+            gl::NEAREST,
+        );
     }
 
     pub fn finish_render(&mut self) {
@@ -216,6 +311,7 @@ pub unsafe fn check_gl_error(tag: &str) {
 }
 
 fn skybox_vertex_data() -> Vec<f32> {
+    // Only positions as vec3
     vec![
         -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0,
         1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0,
@@ -224,5 +320,13 @@ fn skybox_vertex_data() -> Vec<f32> {
         1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
         1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0,
         1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
+    ]
+}
+
+fn screen_quad_vertex_data() -> Vec<f32> {
+    // ndc: vec2 pos, vec2 texcoord
+    vec![
+        -1.0, 1.0, 0.0, 1.0, -1.0, -1.0, 0.0, 0.0, 1.0, -1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, 1.0,
+        -1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0,
     ]
 }
