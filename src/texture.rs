@@ -105,7 +105,7 @@ pub fn create_from_text(content: &str, size: f32, font: &Font) -> u32 {
     texture
 }
 
-pub unsafe fn create_depth_texture() -> u32 {
+pub unsafe fn create_shadowmap_texture() -> u32 {
     let mut depth_texture_handle = 0;
     gl::GenTextures(1, &mut depth_texture_handle);
     gl::BindTexture(gl::TEXTURE_2D, depth_texture_handle);
@@ -142,33 +142,4 @@ pub unsafe fn create_depth_texture() -> u32 {
     );
 
     depth_texture_handle
-}
-
-pub unsafe fn create_draw_target_texture() -> u32 {
-    let mut draw_texture_handle = 0;
-    gl::GenTextures(1, &mut draw_texture_handle);
-    gl::BindTexture(gl::TEXTURE_2D, draw_texture_handle);
-    gl::TexImage2D(
-        gl::TEXTURE_2D,
-        0,
-        gl::RGB as i32,
-        render::DRAW_FRAMEBUFFER_SIZE.0 as i32,
-        render::DRAW_FRAMEBUFFER_SIZE.1 as i32,
-        0,
-        gl::RGB,
-        gl::UNSIGNED_BYTE,
-        std::ptr::null(),
-    );
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
-
-    gl::FramebufferTexture2D(
-        gl::FRAMEBUFFER,
-        gl::COLOR_ATTACHMENT0,
-        gl::TEXTURE_2D,
-        draw_texture_handle,
-        0,
-    );
-
-    draw_texture_handle
 }
