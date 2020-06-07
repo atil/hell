@@ -1,14 +1,14 @@
 use crate::light::DirectionalLight;
 use crate::object::Object;
 use crate::shader::*;
+use crate::skybox::Skybox;
 use crate::texture;
 use cgmath::*;
-use gl::types::*;
 
 pub const SCREEN_SIZE: (u32, u32) = (1280, 720);
 pub const SHADOWMAP_SIZE: i32 = 2048;
 pub const DRAW_FRAMEBUFFER_SIZE: (u32, u32) = (640, 360);
-const SIZEOF_FLOAT: usize = std::mem::size_of::<f32>();
+pub const SIZEOF_FLOAT: usize = std::mem::size_of::<f32>();
 
 #[allow(dead_code)] // The glContext needs to be kept alive, even though not being read
 pub struct Renderer {
@@ -20,9 +20,7 @@ pub struct Renderer {
     depth_shader: Shader,
     light: DirectionalLight,
 
-    skybox_vao: u32,
-    skybox_shader: Shader,
-    skybox_cubemap_handle: u32,
+    skybox: Skybox,
 
     draw_fbo: u32,
 }
@@ -43,10 +41,15 @@ impl Renderer {
         let gl_context = window.gl_create_context().unwrap();
         gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
 
+        let projection = cgmath::perspective(
+            cgmath::Deg(45.0),
+            SCREEN_SIZE.0 as f32 / SCREEN_SIZE.1 as f32,
+            0.1,
+            1000.0,
+        );
+
         let mut depth_fbo: u32 = 0;
         let depth_texture_handle: u32;
-        let mut skybox_vao: u32 = 0;
-        let skybox_cubemap_handle: u32;
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
             gl::Enable(gl::BLEND);
@@ -67,42 +70,7 @@ impl Renderer {
             gl::ReadBuffer(gl::NONE);
             gl::DrawBuffer(gl::NONE);
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-
-            // Skybox
-            let mut skybox_vbo = 0;
-            let skybox_vertex_data = skybox_vertex_data();
-            gl::GenBuffers(1, &mut skybox_vbo);
-            gl::GenVertexArrays(1, &mut skybox_vao);
-            gl::BindBuffer(gl::ARRAY_BUFFER, skybox_vbo);
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                (skybox_vertex_data.len() * SIZEOF_FLOAT) as GLsizeiptr,
-                skybox_vertex_data.as_ptr() as *const GLvoid,
-                gl::STATIC_DRAW,
-            );
-
-            gl::BindVertexArray(skybox_vao);
-            gl::BindBuffer(gl::ARRAY_BUFFER, skybox_vbo);
-            gl::EnableVertexAttribArray(0);
-            gl::VertexAttribPointer(
-                0,
-                3,
-                gl::FLOAT,
-                gl::FALSE,
-                (3 * SIZEOF_FLOAT) as i32,
-                std::ptr::null(),
-            );
-            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-
-            skybox_cubemap_handle = texture::load_cubemap_from_file("assets/skybox/gehenna");
         }
-
-        let projection = cgmath::perspective(
-            cgmath::Deg(45.0),
-            SCREEN_SIZE.0 as f32 / SCREEN_SIZE.1 as f32,
-            0.1,
-            1000.0,
-        );
 
         let light = DirectionalLight::new();
 
@@ -143,15 +111,6 @@ impl Renderer {
             gl::BindTexture(gl::TEXTURE_2D, depth_texture_handle);
         }
 
-        let skybox_shader =
-            Shader::from_file("src/shaders/skybox.glsl").expect("Problem loading skybox shader");
-
-        unsafe {
-            skybox_shader.set_used();
-            skybox_shader.set_mat4("u_projection", projection);
-            skybox_shader.set_i32("u_skybox", 0);
-        }
-
         // Drawing backbuffer
         let mut draw_fbo = 0;
         unsafe {
@@ -182,47 +141,6 @@ impl Renderer {
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
         }
 
-        // Screen quad
-        let mut screen_quad_vao = 0;
-        unsafe {
-            let mut screen_quad_vbo = 0;
-            gl::GenVertexArrays(1, &mut screen_quad_vao);
-            gl::GenBuffers(1, &mut screen_quad_vbo);
-
-            gl::BindVertexArray(screen_quad_vao);
-            gl::BindBuffer(gl::ARRAY_BUFFER, screen_quad_vbo);
-            let screen_quad_vertex_data = screen_quad_vertex_data();
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                (screen_quad_vertex_data.len() * SIZEOF_FLOAT) as GLsizeiptr,
-                screen_quad_vertex_data.as_ptr() as *const GLvoid,
-                gl::STATIC_DRAW,
-            );
-            // Position
-            gl::EnableVertexAttribArray(0);
-            gl::VertexAttribPointer(
-                0,
-                2,
-                gl::FLOAT,
-                gl::FALSE,
-                (4 * SIZEOF_FLOAT) as i32,
-                std::ptr::null(),
-            );
-
-            // Texcoord
-            gl::EnableVertexAttribArray(1);
-            gl::VertexAttribPointer(
-                1,
-                2,
-                gl::FLOAT,
-                gl::FALSE,
-                (4 * SIZEOF_FLOAT) as i32,
-                (2 * SIZEOF_FLOAT) as *const GLvoid,
-            );
-
-            check_gl_error("screen_quad");
-        }
-
         Self {
             window: window,
             gl_context: gl_context,
@@ -232,16 +150,13 @@ impl Renderer {
             depth_fbo: depth_fbo,
             depth_shader: depth_shader,
 
-            skybox_shader: skybox_shader,
-            skybox_vao: skybox_vao,
-            skybox_cubemap_handle: skybox_cubemap_handle,
-
+            skybox: Skybox::new(projection),
             draw_fbo: draw_fbo,
         }
     }
 
     pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
-        // Rendering to depth buffer
+        // Render to depth buffer from the light's perspective
         self.depth_shader.set_used();
         gl::Viewport(0, 0, SHADOWMAP_SIZE, SHADOWMAP_SIZE);
         gl::BindFramebuffer(gl::FRAMEBUFFER, self.depth_fbo);
@@ -252,7 +167,7 @@ impl Renderer {
         }
         gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
 
-        // Rendering to backbuffer
+        // Render to backbuffer
         gl::BindFramebuffer(gl::FRAMEBUFFER, self.draw_fbo);
         self.world_shader.set_used();
         self.world_shader.set_mat4("u_view", player_v);
@@ -268,19 +183,9 @@ impl Renderer {
             obj.material.draw();
         }
 
-        // Skybox
-        self.skybox_shader.set_used();
-        gl::DepthFunc(gl::LEQUAL);
-        let skybox_view = Matrix4::from_cols(player_v.x, player_v.y, player_v.z, Vector4::zero());
-        self.skybox_shader.set_mat4("u_view", skybox_view);
-        gl::BindVertexArray(self.skybox_vao);
-        gl::ActiveTexture(gl::TEXTURE0);
-        gl::BindTexture(gl::TEXTURE_CUBE_MAP, self.skybox_cubemap_handle);
-        gl::DrawArrays(gl::TRIANGLES, 0, 36);
-        gl::BindVertexArray(0);
-        gl::DepthFunc(gl::LESS);
+        self.skybox.draw(player_v);
 
-        // Render to screen quad
+        // Render to the default framebuffer (the screen)
         gl::BindFramebuffer(gl::READ_FRAMEBUFFER, self.draw_fbo);
         gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, 0);
         gl::BlitFramebuffer(
@@ -308,25 +213,4 @@ pub unsafe fn check_gl_error(tag: &str) {
     if error != 0 {
         println!("[{0}] error: {1}", tag, error);
     }
-}
-
-fn skybox_vertex_data() -> Vec<f32> {
-    // Only positions as vec3
-    vec![
-        -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0,
-        1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0,
-        1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-        1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-        1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-        1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0,
-        1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
-    ]
-}
-
-fn screen_quad_vertex_data() -> Vec<f32> {
-    // ndc: vec2 pos, vec2 texcoord
-    vec![
-        -1.0, 1.0, 0.0, 1.0, -1.0, -1.0, 0.0, 0.0, 1.0, -1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, 1.0,
-        -1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0,
-    ]
 }

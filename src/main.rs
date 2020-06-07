@@ -19,6 +19,7 @@ mod physics;
 mod player;
 mod render;
 mod shader;
+mod skybox;
 mod texture;
 mod time;
 mod ui;
