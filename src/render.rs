@@ -3,7 +3,6 @@ use crate::light::*;
 use crate::object::Object;
 use crate::shader::*;
 use crate::skybox::Skybox;
-use crate::texture;
 use cgmath::*;
 
 pub const SCREEN_SIZE: (u32, u32) = (1280, 720);
