@@ -62,10 +62,10 @@ impl Renderer {
             world_shader.set_i32("u_texture0", 0);
             world_shader.set_i32("u_shadowmap", 1);
             world_shader.set_vec3(
-                "u_light_pos",
-                light.position.x,
-                light.position.y,
-                light.position.z,
+                "u_light_dir",
+                light.direction.x,
+                light.direction.y,
+                light.direction.z,
             );
             world_shader.set_mat4("u_light_v", light.view);
             world_shader.set_mat4("u_light_p", light.projection);

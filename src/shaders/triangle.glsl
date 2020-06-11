@@ -41,7 +41,7 @@ void main()
 #ifdef FRAGMENT
 uniform sampler2D u_texture0;
 uniform sampler2D u_shadowmap;
-uniform vec3 u_light_pos;
+uniform vec3 u_light_dir;
 uniform mat4 u_light_v; // TODO #PERF: Merge these two
 uniform mat4 u_light_p;
 uniform vec4 u_light_color;
@@ -79,12 +79,11 @@ float shadow_calc(vec4 frag_light_space_pos, vec3 light_dir) {
 void main() {
     vec4 tex_color = texture(u_texture0, v2f_tex_coord);
 
-    vec3 light_dir = normalize(u_light_pos - v2f_frag_world_pos);
-
-    float diff = max(dot(v2f_normal, light_dir), 0.0);
+    vec3 frag_to_directional_light = normalize(-u_light_dir);
+    float diff = max(dot(v2f_normal, frag_to_directional_light), 0.0);
     tex_color = vec4(tex_color.rgb * (diff + 0.1), 1.0);
 
-    float shadow = shadow_calc(v2f_frag_light_space_pos, light_dir);
+    float shadow = shadow_calc(v2f_frag_light_space_pos, frag_to_directional_light);
     vec4 shadowed_tex_color = vec4(tex_color.rgb * 0.2, 1.0);
 
     out_color = (1.0 - shadow) * shadowed_tex_color + shadow * tex_color;
