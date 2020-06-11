@@ -14,7 +14,6 @@ pub const SIZEOF_FLOAT: usize = std::mem::size_of::<f32>();
 pub struct Renderer {
     window: sdl2::video::Window,
     gl_context: sdl2::video::GLContext,
-    light: DirectionalLight,
     shadowmap: Shadowmap,
     skybox: Skybox,
 
@@ -45,8 +44,9 @@ impl Renderer {
             0.1,
             1000.0,
         );
-        let light = DirectionalLight::new();
-        let shadowmap = light::Shadowmap::new(&light);
+        let directional_light = DirectionalLight::new();
+        let point_light = PointLight::new();
+        let shadowmap = light::Shadowmap::new(&directional_light);
         let world_shader = Shader::from_file("src/shaders/triangle.glsl")
             .expect("\nProblem loading world shader\n");
 
@@ -62,19 +62,27 @@ impl Renderer {
             world_shader.set_i32("u_texture0", 0);
             world_shader.set_i32("u_shadowmap", 1);
             world_shader.set_vec3(
-                "u_light_dir",
-                light.direction.x,
-                light.direction.y,
-                light.direction.z,
+                "u_point_light_pos",
+                point_light.position.x,
+                point_light.position.y,
+                point_light.position.z,
             );
-            world_shader.set_mat4("u_light_v", light.view);
-            world_shader.set_mat4("u_light_p", light.projection);
+            world_shader.set_f32("u_point_light_intensity", point_light.intensity);
+            world_shader.set_f32("u_point_light_attenuation", point_light.attenuation);
+            world_shader.set_vec3(
+                "u_light_dir",
+                directional_light.direction.x,
+                directional_light.direction.y,
+                directional_light.direction.z,
+            );
+            world_shader.set_mat4("u_light_v", directional_light.view);
+            world_shader.set_mat4("u_light_p", directional_light.projection);
             world_shader.set_vec4(
                 "u_light_color",
-                light.color.x,
-                light.color.y,
-                light.color.z,
-                light.color.w,
+                directional_light.color.x,
+                directional_light.color.y,
+                directional_light.color.z,
+                directional_light.color.w,
             );
             world_shader.set_mat4("u_projection", projection);
 
@@ -87,7 +95,6 @@ impl Renderer {
             gl_context: gl_context,
             world_shader: world_shader,
 
-            light: light,
             shadowmap: shadowmap,
 
             skybox: Skybox::new(projection),

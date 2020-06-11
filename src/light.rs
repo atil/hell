@@ -28,6 +28,22 @@ impl DirectionalLight {
     }
 }
 
+pub struct PointLight {
+    pub position: Vector3<f32>,
+    pub intensity: f32,
+    pub attenuation: f32,
+}
+
+impl PointLight {
+    pub fn new() -> PointLight {
+        PointLight {
+            position: Vector3::new(11.0, 2.0, 4.0),
+            intensity: 1.0,
+            attenuation: 0.2,
+        }
+    }
+}
+
 pub struct Shadowmap {
     fbo: u32,
     shader: Shader,

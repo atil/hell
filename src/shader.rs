@@ -101,6 +101,14 @@ impl Shader {
         render::check_gl_error(format!("{} i32", name).as_str());
     }
 
+    pub unsafe fn set_f32(&self, name: &str, f: f32) {
+        let cstr = CString::new(name).unwrap();
+        let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());
+
+        gl::Uniform1f(loc, f);
+        render::check_gl_error(format!("{} f32", name).as_str());
+    }
+
     pub unsafe fn set_vec3(&self, name: &str, f0: f32, f1: f32, f2: f32) {
         let cstr = CString::new(name).unwrap();
         let loc = gl::GetUniformLocation(self.id, cstr.as_ptr());

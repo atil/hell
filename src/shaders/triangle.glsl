@@ -45,6 +45,9 @@ uniform vec3 u_light_dir;
 uniform mat4 u_light_v; // TODO #PERF: Merge these two
 uniform mat4 u_light_p;
 uniform vec4 u_light_color;
+uniform vec3 u_point_light_pos;
+uniform float u_point_light_intensity;
+uniform float u_point_light_attenuation;
 
 in vec3 v2f_frag_world_pos;
 in vec4 v2f_frag_light_space_pos;
@@ -76,14 +79,25 @@ float shadow_calc(vec4 frag_light_space_pos, vec3 light_dir) {
     return shadow / ((SAMPLE_SIZE + 2) * (SAMPLE_SIZE + 2));
 }
 
+float get_frag_brightness() {
+    vec3 frag_to_directional_light = normalize(-u_light_dir);
+    float alignment_with_directional_light = max(dot(v2f_normal, frag_to_directional_light), 0.0);
+
+    vec3 frag_to_point_light = normalize(u_point_light_pos - v2f_frag_world_pos);
+    float alignment_with_point_light = max(dot(v2f_normal, frag_to_point_light), 0.0);
+    float distance_to_point_light = distance(u_point_light_pos, v2f_frag_world_pos);
+
+    float point_light_brightness = alignment_with_point_light * u_point_light_intensity / (u_point_light_attenuation * distance_to_point_light);
+
+    return max(alignment_with_directional_light + point_light_brightness, 0.1);
+}
+
 void main() {
     vec4 tex_color = texture(u_texture0, v2f_tex_coord);
 
-    vec3 frag_to_directional_light = normalize(-u_light_dir);
-    float diff = max(dot(v2f_normal, frag_to_directional_light), 0.0);
-    tex_color = vec4(tex_color.rgb * (diff + 0.1), 1.0);
+    tex_color = vec4(tex_color.rgb * get_frag_brightness(), 1.0);
 
-    float shadow = shadow_calc(v2f_frag_light_space_pos, frag_to_directional_light);
+    float shadow = shadow_calc(v2f_frag_light_space_pos, normalize(-u_light_dir));
     vec4 shadowed_tex_color = vec4(tex_color.rgb * 0.2, 1.0);
 
     out_color = (1.0 - shadow) * shadowed_tex_color + shadow * tex_color;
