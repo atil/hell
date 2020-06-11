@@ -17,7 +17,8 @@ impl Ui<'_> {
         let texture1 = texture::load_from_file("assets/prototype.png");
         let texture2 = texture::create_from_text("Progress", 32.0, &font);
 
-        let shader = Shader::from_file("src/shaders/ui.glsl").expect("Error loading ui shader");
+        let shader =
+            Shader::from_file("src/shaders/ui.glsl", false).expect("Error loading ui shader");
 
         let rekt1 = Rect::new(-0.01, 0.01, 0.02, 0.02);
         let rekt2 = Rect::new(-0.4, -0.9, 0.2, 0.1);

@@ -55,7 +55,7 @@ impl Shadowmap {
         let mut depth_fbo: u32 = 0;
         let depth_texture_handle: u32;
 
-        let shader = Shader::from_file("src/shaders/shadowmap_depth.glsl")
+        let shader = Shader::from_file("src/shaders/shadowmap_depth.glsl", false)
             .expect("\nProblem loading shadowmap depth shader\n");
 
         unsafe {

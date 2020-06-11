@@ -47,7 +47,7 @@ impl Renderer {
         let directional_light = DirectionalLight::new();
         let point_light = PointLight::new();
         let shadowmap = lighting::Shadowmap::new(&directional_light);
-        let world_shader = Shader::from_file("src/shaders/triangle.glsl")
+        let world_shader = Shader::from_file("src/shaders/triangle.glsl", false)
             .expect("\nProblem loading world shader\n");
 
         let draw_fbo = unsafe { create_draw_backbuffer() };

@@ -30,8 +30,8 @@ impl Skybox {
         let vertex_data = vertex_data();
         let cubemap_handle: u32;
 
-        let shader =
-            Shader::from_file("src/shaders/skybox.glsl").expect("Problem loading skybox shader");
+        let shader = Shader::from_file("src/shaders/skybox.glsl", false)
+            .expect("Problem loading skybox shader");
 
         unsafe {
             gl::GenBuffers(1, &mut vbo);

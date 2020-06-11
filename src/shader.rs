@@ -10,13 +10,14 @@ use std::io::prelude::*;
 const VERSION: &'static str = "#version 420 core\r\n";
 const DEFINE_VERTEX: &'static str = "#define VERTEX\r\n";
 const DEFINE_FRAGMENT: &'static str = "#define FRAGMENT\r\n";
+const DEFINE_GEOMETRY: &'static str = "#define FRAGMENT\r\n";
 
 pub struct Shader {
     id: u32,
 }
 
 impl Shader {
-    pub fn from_file(path: &str) -> Result<Shader, String> {
+    pub fn from_file(path: &str, has_geom: bool) -> Result<Shader, String> {
         let mut shader_file =
             File::open(path).expect(format!("Unable to open shader file: {}", path).as_str());
         let mut shader_text = String::new();
@@ -27,10 +28,21 @@ impl Shader {
         let shader_id = unsafe { gl::CreateProgram() };
         let vert_id = Shader::from_source(&shader_text, gl::VERTEX_SHADER, DEFINE_VERTEX)?;
         let frag_id = Shader::from_source(&shader_text, gl::FRAGMENT_SHADER, DEFINE_FRAGMENT)?;
+        let geom_id = {
+            if has_geom {
+                Shader::from_source(&shader_text, gl::GEOMETRY_SHADER, DEFINE_GEOMETRY)?
+            } else {
+                0
+            }
+        };
         unsafe {
             let mut success: GLint = 1;
             gl::AttachShader(shader_id, vert_id);
             gl::AttachShader(shader_id, frag_id);
+            if has_geom {
+                gl::AttachShader(shader_id, geom_id);
+            }
+
             gl::LinkProgram(shader_id);
             gl::GetProgramiv(shader_id, gl::LINK_STATUS, &mut success);
 
@@ -51,6 +63,9 @@ impl Shader {
 
             gl::DetachShader(shader_id, vert_id);
             gl::DetachShader(shader_id, frag_id);
+            if has_geom {
+                gl::DetachShader(shader_id, geom_id);
+            }
         }
 
         Ok(Shader { id: shader_id })
