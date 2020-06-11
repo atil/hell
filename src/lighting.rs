@@ -37,7 +37,7 @@ pub struct PointLight {
 impl PointLight {
     pub fn new() -> PointLight {
         PointLight {
-            position: Vector3::new(11.0, 2.0, 4.0),
+            position: Vector3::new(24.0, 2.0, -3.0),
             intensity: 1.0,
             attenuation: 0.2,
         }

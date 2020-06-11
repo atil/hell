@@ -89,7 +89,7 @@ float get_frag_brightness() {
 
     float point_light_brightness = alignment_with_point_light * u_point_light_intensity / (u_point_light_attenuation * distance_to_point_light);
 
-    return max(alignment_with_directional_light + point_light_brightness, 0.1);
+    return max(point_light_brightness, 0.1);
 }
 
 void main() {

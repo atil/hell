@@ -1,5 +1,5 @@
-use crate::light;
-use crate::light::*;
+use crate::lighting;
+use crate::lighting::*;
 use crate::object::Object;
 use crate::shader::*;
 use crate::skybox::Skybox;
@@ -46,7 +46,7 @@ impl Renderer {
         );
         let directional_light = DirectionalLight::new();
         let point_light = PointLight::new();
-        let shadowmap = light::Shadowmap::new(&directional_light);
+        let shadowmap = lighting::Shadowmap::new(&directional_light);
         let world_shader = Shader::from_file("src/shaders/triangle.glsl")
             .expect("\nProblem loading world shader\n");
 
