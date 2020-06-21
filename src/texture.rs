@@ -1,4 +1,3 @@
-use crate::render;
 use gl::types::*;
 use image::{DynamicImage, GenericImageView, Rgba};
 use rusttype::{point, Font, Scale};
@@ -103,43 +102,4 @@ pub fn create_from_text(content: &str, size: f32, font: &Font) -> u32 {
         gl::GenerateMipmap(gl::TEXTURE_2D);
     }
     texture
-}
-
-pub unsafe fn create_shadowmap_texture() -> u32 {
-    let mut depth_texture_handle = 0;
-    gl::GenTextures(1, &mut depth_texture_handle);
-    gl::BindTexture(gl::TEXTURE_2D, depth_texture_handle);
-    gl::TexParameteri(
-        gl::TEXTURE_2D,
-        gl::TEXTURE_WRAP_S,
-        gl::CLAMP_TO_BORDER as i32,
-    );
-    gl::TexParameteri(
-        gl::TEXTURE_2D,
-        gl::TEXTURE_WRAP_T,
-        gl::CLAMP_TO_BORDER as i32,
-    );
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
-
-    let border_color = vec![1.0, 1.0, 1.0, 1.0];
-    gl::TexParameterfv(
-        gl::TEXTURE_2D,
-        gl::TEXTURE_BORDER_COLOR,
-        border_color.as_ptr(),
-    );
-
-    gl::TexImage2D(
-        gl::TEXTURE_2D,
-        0,
-        gl::DEPTH_COMPONENT as i32,
-        render::SHADOWMAP_SIZE as i32,
-        render::SHADOWMAP_SIZE as i32,
-        0,
-        gl::DEPTH_COMPONENT,
-        gl::FLOAT,
-        std::ptr::null(),
-    );
-
-    depth_texture_handle
 }

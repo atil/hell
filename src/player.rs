@@ -15,7 +15,7 @@ const AIR_DECELERATION: f32 = 0.00005;
 const MAX_SPEED_ON_ONE_DIMENSION: f32 = 0.01;
 const GRAVITY: f32 = 0.00003;
 const JUMP_FORCE: f32 = 0.01;
-const START_POSITION: Point3<f32> = Point3::new(0.0, 2.0, -2.0);
+const START_POSITION: Point3<f32> = Point3::new(-5.0, 2.0, 5.0);
 
 pub struct Player {
     velocity: Vector3<f32>,

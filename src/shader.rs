@@ -10,7 +10,7 @@ use std::io::prelude::*;
 const VERSION: &'static str = "#version 420 core\r\n";
 const DEFINE_VERTEX: &'static str = "#define VERTEX\r\n";
 const DEFINE_FRAGMENT: &'static str = "#define FRAGMENT\r\n";
-const DEFINE_GEOMETRY: &'static str = "#define FRAGMENT\r\n";
+const DEFINE_GEOMETRY: &'static str = "#define GEOMETRY\r\n";
 
 pub struct Shader {
     id: u32,

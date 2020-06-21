@@ -14,9 +14,8 @@ out vec4 v2f_frag_light_space_pos;
 out vec2 v2f_tex_coord;
 out vec3 v2f_normal;
 
-#define JITTER_EFFECT
 #define JITTER_RESOLUTION vec2(160, 120)
-#
+
 void main()
 {
     v2f_frag_world_pos = vec3(u_model * vec4(in_position, 1.0));
@@ -28,11 +27,10 @@ void main()
 
     vec4 clip_pos = u_projection * u_view * u_model * vec4(in_position, 1.0);
 
-#ifdef JITTER_EFFECT
+    // jitter effect
     clip_pos.xyz = clip_pos.xyz / clip_pos.w; // clip space -> NDC
     clip_pos.xy = floor(JITTER_RESOLUTION * clip_pos.xy) / JITTER_RESOLUTION;
     clip_pos.xyz *= clip_pos.w; // NDC -> clip space
-#endif
 
     gl_Position = clip_pos;
 }
@@ -40,7 +38,9 @@ void main()
 
 #ifdef FRAGMENT
 uniform sampler2D u_texture0;
-uniform sampler2D u_shadowmap;
+uniform sampler2D u_shadowmap_directional;
+uniform samplerCube u_shadowmap_point;
+
 uniform vec3 u_light_dir;
 uniform mat4 u_light_v; // TODO #PERF: Merge these two
 uniform mat4 u_light_p;
@@ -48,6 +48,7 @@ uniform vec4 u_light_color;
 uniform vec3 u_point_light_pos;
 uniform float u_point_light_intensity;
 uniform float u_point_light_attenuation;
+uniform float u_far_plane;
 
 in vec3 v2f_frag_world_pos;
 in vec4 v2f_frag_light_space_pos;
@@ -58,27 +59,43 @@ out vec4 out_color;
 
 #define SAMPLE_SIZE 1
 
-float shadow_calc(vec4 frag_light_space_pos, vec3 light_dir) {
-    vec3 pos = frag_light_space_pos.xyz * 0.5 + 0.5;
+float is_in_shadow_directional() {
+    vec3 light_dir = -normalize(u_light_dir);
+    vec3 pos = v2f_frag_light_space_pos.xyz * 0.5 + 0.5;
     pos.z = min(pos.z, 1.0);
-
-    float depth = texture(u_shadowmap, pos.xy).r;
 
     // If the surface is perpendicular to the light direction
     // then it needs larger bias values
     float bias = max(0.002 * (1.0 - dot(v2f_normal, light_dir)), 0.00001);
 
     float shadow = 0.0;
-    vec2 texel_size = 1.0 / textureSize(u_shadowmap, 0);
+    vec2 texel_size = 1.0 / textureSize(u_shadowmap_directional, 0);
     for(int x = -SAMPLE_SIZE; x <= SAMPLE_SIZE; x++) {
         for(int y = -SAMPLE_SIZE; y <= SAMPLE_SIZE; y++) {
-            float pcf_depth = texture(u_shadowmap, pos.xy + vec2(x, y) * texel_size).r; 
+            float pcf_depth = texture(u_shadowmap_directional, pos.xy + vec2(x, y) * texel_size).r; 
             shadow += (pcf_depth + bias) < pos.z ? 0.0 : 1.0; // 0 if shadowed
         }    
     }
     return shadow / ((SAMPLE_SIZE + 2) * (SAMPLE_SIZE + 2));
 }
 
+float is_in_shadow_point() {
+
+    // get vector between fragment position and light position
+    vec3 light_to_frag = v2f_frag_world_pos - u_point_light_pos;
+
+    // ise the fragment to light vector to sample from the depth map    
+    float closest_depth = texture(u_shadowmap_point, light_to_frag).r;
+
+    // it is currently in linear range between [0,1], let's re-transform it back to original depth value
+    closest_depth *= u_far_plane;
+    // now get current linear depth as the length between the fragment and light position
+    float current_depth = length(light_to_frag);
+    float bias = 0.05; // we use a much larger bias since depth is now in [near_plane, far_plane] range
+    return current_depth - bias > closest_depth ? 1.0 : 0.0; // 1 if shadowed
+
+}
+ 
 float get_frag_brightness() {
     vec3 frag_to_directional_light = normalize(-u_light_dir);
     float alignment_with_directional_light = max(dot(v2f_normal, frag_to_directional_light), 0.0);
@@ -97,9 +114,13 @@ void main() {
 
     tex_color = vec4(tex_color.rgb * get_frag_brightness(), 1.0);
 
-    float shadow = shadow_calc(v2f_frag_light_space_pos, normalize(-u_light_dir));
+    /* float shadow = is_in_shadow_directional(); */
+    /* shadow += is_in_shadow_point(); */
+
+    float shadow = is_in_shadow_point();
+
     vec4 shadowed_tex_color = vec4(tex_color.rgb * 0.2, 1.0);
 
-    out_color = (1.0 - shadow) * shadowed_tex_color + shadow * tex_color;
+    out_color = (1.0 - shadow) * tex_color + shadow * shadowed_tex_color;
 }
 #endif
