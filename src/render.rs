@@ -3,7 +3,11 @@ use crate::object::Object;
 use crate::point_light::*;
 use crate::shader::*;
 use crate::skybox::Skybox;
+use crate::*;
 use cgmath::*;
+
+pub type TextureHandle = u32;
+pub type BufferHandle = u32;
 
 pub const SCREEN_SIZE: (u32, u32) = (1280, 720);
 pub const SHADOWMAP_SIZE: i32 = 2048;
@@ -21,7 +25,7 @@ pub struct Renderer {
     point_light: PointLight,
 
     world_shader: Shader,
-    draw_fbo: u32,
+    draw_fbo: BufferHandle,
 }
 
 impl Renderer {
@@ -49,6 +53,7 @@ impl Renderer {
         );
         let directional_light = DirectionalLight::new();
         let point_light = PointLight::new(Point3::new(24.0, 2.0, -3.0), 1.0, 0.2);
+        let _point_light_2 = PointLight::new(Point3::new(34.0, 2.0, -3.0), 1.0, 0.2);
 
         let world_shader = Shader::from_file("src/shaders/triangle.glsl", false)
             .expect("\nProblem loading world shader\n");
@@ -118,10 +123,8 @@ impl Renderer {
     }
 
     pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
-        // Render to depth buffer from the light's perspective
         self.directional_light.fill_depth_texture(&objects);
 
-        // Render to point shadow cubemap
         self.point_light.fill_depth_cubemap(&objects);
 
         // Render world to backbuffer

@@ -1,5 +1,6 @@
 use crate::object::Object;
 use crate::render;
+use crate::render::{BufferHandle, TextureHandle};
 use crate::shader::*;
 use cgmath::*;
 
@@ -9,9 +10,9 @@ pub struct DirectionalLight {
     pub projection: Matrix4<f32>,
     pub color: Vector4<f32>,
 
-    fbo: u32,
+    fbo: BufferHandle,
     shader: Shader,
-    pub depth_texture_handle: u32,
+    pub depth_texture_handle: TextureHandle,
 }
 
 impl DirectionalLight {
@@ -26,8 +27,8 @@ impl DirectionalLight {
         let projection = cgmath::ortho(-s, s, -s, s, render::NEAR_PLANE, render::FAR_PLANE);
         let color = Vector4::new(0.2, 0.1, 0.0, 1.0);
 
-        let mut depth_fbo: u32 = 0;
-        let depth_texture_handle: u32;
+        let mut depth_fbo: BufferHandle = 0;
+        let depth_texture_handle: TextureHandle;
 
         let shader = Shader::from_file("src/shaders/shadowmap_depth_directional.glsl", false)
             .expect("\nProblem loading directional shadowmap depth shader\n");
@@ -78,7 +79,7 @@ impl DirectionalLight {
         gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
     }
 
-    unsafe fn create_shadowmap_texture() -> u32 {
+    unsafe fn create_shadowmap_texture() -> TextureHandle {
         let mut depth_texture_handle = 0;
         gl::GenTextures(1, &mut depth_texture_handle);
         gl::BindTexture(gl::TEXTURE_2D, depth_texture_handle);
@@ -117,4 +118,3 @@ impl DirectionalLight {
         depth_texture_handle
     }
 }
-

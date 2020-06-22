@@ -1,5 +1,6 @@
 use crate::object::Object;
 use crate::render;
+use crate::render::{BufferHandle, TextureHandle};
 use crate::shader::*;
 use cgmath::*;
 
@@ -7,16 +8,16 @@ pub struct PointLight {
     pub position: Point3<f32>,
     pub intensity: f32,
     pub attenuation: f32,
-    pub depth_cubemap_handle: u32,
+    pub depth_cubemap_handle: TextureHandle,
 
-    fbo: u32,
+    fbo: BufferHandle,
     shader: Shader,
 }
 
 impl PointLight {
     pub fn new(position: Point3<f32>, intensity: f32, attenuation: f32) -> PointLight {
-        let mut depth_fbo: u32 = 0;
-        let depth_cubemap_handle: u32;
+        let mut depth_fbo: BufferHandle = 0;
+        let depth_cubemap_handle: TextureHandle;
 
         let shader = Shader::from_file("src/shaders/shadowmap_depth_point.glsl", true)
             .expect("\nProblem loading point shadowmap depth shader\n");
@@ -108,7 +109,7 @@ impl PointLight {
         gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
     }
 
-    unsafe fn create_cubemap() -> u32 {
+    unsafe fn create_cubemap() -> TextureHandle {
         let mut cubemap_handle = 0;
         gl::GenTextures(1, &mut cubemap_handle);
         gl::BindTexture(gl::TEXTURE_CUBE_MAP, cubemap_handle);

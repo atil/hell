@@ -1,25 +1,23 @@
 use crate::render;
+use crate::render::{BufferHandle, TextureHandle};
 use crate::shader::*;
 use cgmath::*;
 use image::GenericImageView;
 use std::path::Path;
 
-// TODO #PERF: Make this static
-fn vertex_data() -> Vec<f32> {
-    vec![
-        -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0,
-        1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0,
-        1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-        1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-        1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-        1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0,
-        1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
-    ]
-}
+const VERTEX_DATA: [f32; 108] = [
+    -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0,
+    -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0,
+    -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0,
+    1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0,
+    -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
+    -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0,
+    -1.0, 1.0, 1.0, -1.0, 1.0,
+];
 
 pub struct Skybox {
-    vao: u32,
-    cubemap_handle: u32,
+    vao: BufferHandle,
+    cubemap_handle: TextureHandle,
     shader: Shader,
 }
 
@@ -27,8 +25,7 @@ impl Skybox {
     pub fn new(projection: Matrix4<f32>) -> Skybox {
         let mut vao = 0;
         let mut vbo = 0;
-        let vertex_data = vertex_data();
-        let cubemap_handle: u32;
+        let cubemap_handle: TextureHandle;
 
         let shader = Shader::from_file("src/shaders/skybox.glsl", false)
             .expect("Problem loading skybox shader");
@@ -39,8 +36,8 @@ impl Skybox {
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (vertex_data.len() * render::SIZEOF_FLOAT) as isize,
-                vertex_data.as_ptr() as *const std::ffi::c_void,
+                (VERTEX_DATA.len() * render::SIZEOF_FLOAT) as isize,
+                VERTEX_DATA.as_ptr() as *const std::ffi::c_void,
                 gl::STATIC_DRAW,
             );
 
@@ -85,7 +82,7 @@ impl Skybox {
     }
 }
 
-unsafe fn load_cubemap_from_file(cubemap_path: &str) -> u32 {
+unsafe fn load_cubemap_from_file(cubemap_path: &str) -> TextureHandle {
     let mut cubemap_handle = 0;
 
     gl::GenTextures(1, &mut cubemap_handle);

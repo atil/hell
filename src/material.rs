@@ -1,5 +1,6 @@
 extern crate tobj;
 use crate::render;
+use crate::render::{BufferHandle, TextureHandle};
 use crate::texture;
 use gl::types::*;
 
@@ -16,9 +17,9 @@ enum MaterialType {
 }
 
 pub struct Material {
-    vbo: u32,
-    ibo: u32,
-    vao: u32,
+    vbo: BufferHandle,
+    ibo: BufferHandle,
+    vao: BufferHandle,
     m_type: MaterialType,
     index_data: Vec<u32>,
 }

@@ -1,9 +1,10 @@
+use crate::render::TextureHandle;
 use gl::types::*;
 use image::{DynamicImage, GenericImageView, Rgba};
 use rusttype::{point, Font, Scale};
 use std::path::Path;
 
-pub fn load_from_file(texture_path: &str) -> u32 {
+pub fn load_from_file(texture_path: &str) -> TextureHandle {
     let mut texture_handle = 0;
     unsafe {
         gl::GenTextures(1, &mut texture_handle);
@@ -41,7 +42,7 @@ pub fn load_from_file(texture_path: &str) -> u32 {
     texture_handle
 }
 
-pub fn create_from_text(content: &str, size: f32, font: &Font) -> u32 {
+pub fn create_from_text(content: &str, size: f32, font: &Font) -> TextureHandle {
     let scale = Scale::uniform(size);
     let color = (255, 0, 255);
     let v_metrics = font.v_metrics(scale);
