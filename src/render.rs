@@ -1,6 +1,6 @@
-use crate::lighting;
-use crate::lighting::*;
+use crate::directional_light::*;
 use crate::object::Object;
+use crate::point_light::*;
 use crate::shader::*;
 use crate::skybox::Skybox;
 use cgmath::*;
@@ -16,10 +16,9 @@ pub const NEAR_PLANE: f32 = 0.1;
 pub struct Renderer {
     window: sdl2::video::Window,
     gl_context: sdl2::video::GLContext,
-    directional_shadowmap: DirectionalShadowmap,
+    directional_light: DirectionalLight,
     skybox: Skybox,
     point_light: PointLight,
-    point_shadowmap: PointShadowmap,
 
     world_shader: Shader,
     draw_fbo: u32,
@@ -49,9 +48,7 @@ impl Renderer {
             FAR_PLANE,
         );
         let directional_light = DirectionalLight::new();
-        let point_light = PointLight::new();
-        let directional_shadowmap = lighting::DirectionalShadowmap::new(&directional_light);
-        let point_shadowmap = lighting::PointShadowmap::new();
+        let point_light = PointLight::new(Point3::new(24.0, 2.0, -3.0), 1.0, 0.2);
 
         let world_shader = Shader::from_file("src/shaders/triangle.glsl", false)
             .expect("\nProblem loading world shader\n");
@@ -102,9 +99,9 @@ impl Renderer {
             // Look this up. This might bit us in the back
             // Is this the active texture swap in render()?
             gl::ActiveTexture(gl::TEXTURE2);
-            gl::BindTexture(gl::TEXTURE_CUBE_MAP, point_shadowmap.depth_cubemap_handle);
+            gl::BindTexture(gl::TEXTURE_CUBE_MAP, point_light.depth_cubemap_handle);
             gl::ActiveTexture(gl::TEXTURE1);
-            gl::BindTexture(gl::TEXTURE_2D, directional_shadowmap.depth_texture_handle);
+            gl::BindTexture(gl::TEXTURE_2D, directional_light.depth_texture_handle);
         }
 
         Self {
@@ -112,9 +109,8 @@ impl Renderer {
             gl_context: gl_context,
             world_shader: world_shader,
 
-            directional_shadowmap: directional_shadowmap,
+            directional_light: directional_light,
             point_light: point_light,
-            point_shadowmap: point_shadowmap,
 
             skybox: Skybox::new(projection),
             draw_fbo: draw_fbo,
@@ -123,10 +119,10 @@ impl Renderer {
 
     pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
         // Render to depth buffer from the light's perspective
-        self.directional_shadowmap.draw(&objects);
+        self.directional_light.fill_depth_texture(&objects);
 
         // Render to point shadow cubemap
-        self.point_shadowmap.draw(&self.point_light, &objects);
+        self.point_light.fill_depth_cubemap(&objects);
 
         // Render world to backbuffer
         gl::BindFramebuffer(gl::FRAMEBUFFER, self.draw_fbo);
@@ -142,10 +138,7 @@ impl Renderer {
 
         // Setting the pointlight cubemap for rendering the world
         gl::ActiveTexture(gl::TEXTURE1);
-        gl::BindTexture(
-            gl::TEXTURE_CUBE_MAP,
-            self.point_shadowmap.depth_cubemap_handle,
-        );
+        gl::BindTexture(gl::TEXTURE_CUBE_MAP, self.point_light.depth_cubemap_handle);
 
         for obj in objects {
             self.world_shader.set_mat4("u_model", obj.transform);

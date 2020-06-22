@@ -8,15 +8,16 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 
 mod assets;
+mod directional_light;
 mod geom;
 mod keys;
-mod lighting;
 mod material;
 mod math;
 mod mesh;
 mod object;
 mod physics;
 mod player;
+mod point_light;
 mod render;
 mod shader;
 mod skybox;
