@@ -6,8 +6,7 @@ layout (location = 2) in vec3 in_normal;
 uniform mat4 u_model;
 uniform mat4 u_view;
 uniform mat4 u_projection;
-uniform mat4 u_light_v;
-uniform mat4 u_light_p;
+uniform mat4 u_directional_light_vp;
 
 out vec3 v2f_frag_world_pos;
 out vec4 v2f_frag_light_space_pos;
@@ -19,7 +18,7 @@ out vec3 v2f_normal;
 void main()
 {
     v2f_frag_world_pos = vec3(u_model * vec4(in_position, 1.0));
-    v2f_frag_light_space_pos = u_light_p * u_light_v * vec4(v2f_frag_world_pos, 1.0);
+    v2f_frag_light_space_pos = u_directional_light_vp* vec4(v2f_frag_world_pos, 1.0);
 
     v2f_normal = normalize(mat3(transpose(inverse(u_model))) * in_normal);  
 
@@ -41,10 +40,10 @@ uniform sampler2D u_texture0;
 uniform sampler2D u_shadowmap_directional;
 uniform samplerCube u_shadowmap_point;
 
-uniform vec3 u_light_dir;
-uniform mat4 u_light_v; // TODO #PERF: Merge these two
-uniform mat4 u_light_p;
-uniform vec4 u_light_color;
+uniform vec3 u_directional_light_dir;
+uniform mat4 u_directional_light_vp;
+uniform vec4 u_directional_light_color;
+
 uniform vec3 u_point_light_pos;
 uniform float u_point_light_intensity;
 uniform float u_point_light_attenuation;
@@ -60,7 +59,7 @@ out vec4 out_color;
 #define SAMPLE_SIZE 1
 
 float is_in_shadow_directional() {
-    vec3 light_dir = -normalize(u_light_dir);
+    vec3 light_dir = -normalize(u_directional_light_dir);
     vec3 pos = v2f_frag_light_space_pos.xyz * 0.5 + 0.5;
     pos.z = min(pos.z, 1.0);
 
@@ -73,40 +72,33 @@ float is_in_shadow_directional() {
     for(int x = -SAMPLE_SIZE; x <= SAMPLE_SIZE; x++) {
         for(int y = -SAMPLE_SIZE; y <= SAMPLE_SIZE; y++) {
             float pcf_depth = texture(u_shadowmap_directional, pos.xy + vec2(x, y) * texel_size).r; 
-            shadow += (pcf_depth + bias) < pos.z ? 0.0 : 1.0; // 0 if shadowed
+            shadow += (pcf_depth + bias) < pos.z ? 1.0 : 0.0; // 1 if shadowed
         }    
     }
     return shadow / ((SAMPLE_SIZE + 2) * (SAMPLE_SIZE + 2));
 }
 
 float is_in_shadow_point() {
-
-    // get vector between fragment position and light position
     vec3 light_to_frag = v2f_frag_world_pos - u_point_light_pos;
 
-    // ise the fragment to light vector to sample from the depth map    
-    float closest_depth = texture(u_shadowmap_point, light_to_frag).r;
+    float depth_in_cubemap = texture(u_shadowmap_point, light_to_frag).r;
+    depth_in_cubemap *= u_far_plane;
 
-    // it is currently in linear range between [0,1], let's re-transform it back to original depth value
-    closest_depth *= u_far_plane;
-    // now get current linear depth as the length between the fragment and light position
-    float current_depth = length(light_to_frag);
-    float bias = 0.05; // we use a much larger bias since depth is now in [near_plane, far_plane] range
-    return current_depth - bias > closest_depth ? 1.0 : 0.0; // 1 if shadowed
-
+    float bias = 0.05;
+    // TODO Soft shadows: Sample the nearby cube-texels
+    return length(light_to_frag) - bias > depth_in_cubemap ? 1.0 : 0.0; // 1 if shadowed
 }
  
 float get_frag_brightness() {
-    vec3 frag_to_directional_light = normalize(-u_light_dir);
+    vec3 frag_to_directional_light = normalize(-u_directional_light_dir);
     float alignment_with_directional_light = max(dot(v2f_normal, frag_to_directional_light), 0.0);
 
     vec3 frag_to_point_light = normalize(u_point_light_pos - v2f_frag_world_pos);
     float alignment_with_point_light = max(dot(v2f_normal, frag_to_point_light), 0.0);
     float distance_to_point_light = distance(u_point_light_pos, v2f_frag_world_pos);
-
     float point_light_brightness = alignment_with_point_light * u_point_light_intensity / (u_point_light_attenuation * distance_to_point_light);
 
-    return max(point_light_brightness, 0.1);
+    return max(point_light_brightness + alignment_with_directional_light, 0.1);
 }
 
 void main() {
@@ -114,10 +106,8 @@ void main() {
 
     tex_color = vec4(tex_color.rgb * get_frag_brightness(), 1.0);
 
-    /* float shadow = is_in_shadow_directional(); */
-    /* shadow += is_in_shadow_point(); */
-
-    float shadow = is_in_shadow_point();
+    float shadow = is_in_shadow_directional();
+    shadow += is_in_shadow_point();
 
     vec4 shadowed_tex_color = vec4(tex_color.rgb * 0.2, 1.0);
 

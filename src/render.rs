@@ -9,15 +9,15 @@ pub const SCREEN_SIZE: (u32, u32) = (1280, 720);
 pub const SHADOWMAP_SIZE: i32 = 2048;
 pub const DRAW_FRAMEBUFFER_SIZE: (u32, u32) = (640, 360);
 pub const SIZEOF_FLOAT: usize = std::mem::size_of::<f32>();
-pub const FAR_PLANE: f32 = 100.0;
+pub const FAR_PLANE: f32 = 1000.0;
 pub const NEAR_PLANE: f32 = 0.1;
 
 #[allow(dead_code)] // The glContext needs to be kept alive, even though not being read
 pub struct Renderer {
     window: sdl2::video::Window,
     gl_context: sdl2::video::GLContext,
-    // directional_shadowmap: DirectionalShadowmap,
-    // skybox: Skybox,
+    directional_shadowmap: DirectionalShadowmap,
+    skybox: Skybox,
     point_light: PointLight,
     point_shadowmap: PointShadowmap,
 
@@ -48,9 +48,9 @@ impl Renderer {
             NEAR_PLANE,
             FAR_PLANE,
         );
-        // let directional_light = DirectionalLight::new();
+        let directional_light = DirectionalLight::new();
         let point_light = PointLight::new();
-        // let directional_shadowmap = lighting::DirectionalShadowmap::new(&directional_light);
+        let directional_shadowmap = lighting::DirectionalShadowmap::new(&directional_light);
         let point_shadowmap = lighting::PointShadowmap::new();
 
         let world_shader = Shader::from_file("src/shaders/triangle.glsl", false)
@@ -66,9 +66,8 @@ impl Renderer {
 
             world_shader.set_used();
             world_shader.set_i32("u_texture0", 0);
-            // world_shader.set_i32("u_shadowmap_directional", 1);
-            world_shader.set_i32("u_shadowmap_point", 1);
-
+            world_shader.set_i32("u_shadowmap_directional", 1);
+            world_shader.set_i32("u_shadowmap_point", 2);
             world_shader.set_vec3(
                 "u_point_light_pos",
                 point_light.position.x,
@@ -79,27 +78,33 @@ impl Renderer {
             world_shader.set_f32("u_point_light_attenuation", point_light.attenuation);
             world_shader.set_f32("u_far_plane", FAR_PLANE);
 
-            // world_shader.set_vec3(
-            //     "u_light_dir",
-            //     directional_light.direction.x,
-            //     directional_light.direction.y,
-            //     directional_light.direction.z,
-            // );
-            // world_shader.set_mat4("u_light_v", directional_light.view);
-            // world_shader.set_mat4("u_light_p", directional_light.projection);
-            // world_shader.set_vec4(
-            //     "u_light_color",
-            //     directional_light.color.x,
-            //     directional_light.color.y,
-            //     directional_light.color.z,
-            //     directional_light.color.w,
-            // );
+            world_shader.set_vec3(
+                "u_directional_light_dir",
+                directional_light.direction.x,
+                directional_light.direction.y,
+                directional_light.direction.z,
+            );
+            world_shader.set_mat4(
+                "u_directional_light_vp",
+                directional_light.projection * directional_light.view,
+            );
+            world_shader.set_vec4(
+                "u_directional_light_color",
+                directional_light.color.x,
+                directional_light.color.y,
+                directional_light.color.z,
+                directional_light.color.w,
+            );
             world_shader.set_mat4("u_projection", projection);
 
-            // gl::ActiveTexture(gl::TEXTURE1);
-            // gl::BindTexture(gl::TEXTURE_2D, directional_shadowmap.depth_texture_handle);
-            gl::ActiveTexture(gl::TEXTURE1);
+            // Zero is reserved for the diffuse texture
+            // TODO: Changing the order of these two causes creepy-looking blotch stains
+            // Look this up. This might bit us in the back
+            // Is this the active texture swap in render()?
+            gl::ActiveTexture(gl::TEXTURE2);
             gl::BindTexture(gl::TEXTURE_CUBE_MAP, point_shadowmap.depth_cubemap_handle);
+            gl::ActiveTexture(gl::TEXTURE1);
+            gl::BindTexture(gl::TEXTURE_2D, directional_shadowmap.depth_texture_handle);
         }
 
         Self {
@@ -107,19 +112,20 @@ impl Renderer {
             gl_context: gl_context,
             world_shader: world_shader,
 
-            // directional_shadowmap: directional_shadowmap,
+            directional_shadowmap: directional_shadowmap,
             point_light: point_light,
             point_shadowmap: point_shadowmap,
 
-            // skybox: Skybox::new(projection),
+            skybox: Skybox::new(projection),
             draw_fbo: draw_fbo,
         }
     }
 
     pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
         // Render to depth buffer from the light's perspective
-        // self.directional_shadowmap.draw(&objects);
+        self.directional_shadowmap.draw(&objects);
 
+        // Render to point shadow cubemap
         self.point_shadowmap.draw(&self.point_light, &objects);
 
         // Render world to backbuffer
@@ -147,7 +153,7 @@ impl Renderer {
         }
 
         // Fill the depth==1 fragments with sky texture
-        // self.skybox.draw(player_v);
+        self.skybox.draw(player_v);
 
         // Render from the draw framebuffer to the default framebuffer (the screen)
         gl::BindFramebuffer(gl::READ_FRAMEBUFFER, self.draw_fbo);
