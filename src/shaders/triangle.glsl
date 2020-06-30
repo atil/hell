@@ -44,9 +44,22 @@ uniform vec3 u_directional_light_dir;
 uniform mat4 u_directional_light_vp;
 uniform vec4 u_directional_light_color;
 
-uniform vec3 u_point_light_pos;
-uniform float u_point_light_intensity;
-uniform float u_point_light_attenuation;
+struct PointLight {
+    vec3 position;
+    float intensity;
+    float attenuation;
+};
+
+uniform samplerCubeArray u_shadowmaps_point;
+
+#define LIGHT_COUNT 1
+
+uniform PointLight u_point_lights[LIGHT_COUNT];
+
+/* uniform vec3 u_point_light_pos; */
+/* uniform float u_point_light_intensity; */
+/* uniform float u_point_light_attenuation; */
+
 uniform float u_far_plane;
 
 in vec3 v2f_frag_world_pos;
@@ -79,24 +92,42 @@ float is_in_shadow_directional() {
 }
 
 float is_in_shadow_point() {
-    vec3 light_to_frag = v2f_frag_world_pos - u_point_light_pos;
+    float is_shadow = 0;
+    for (int i = 0; i < LIGHT_COUNT; i++) {
+        vec3 light_to_frag = v2f_frag_world_pos - u_point_lights[i].position;
 
-    float depth_in_cubemap = texture(u_shadowmap_point, light_to_frag).r;
-    depth_in_cubemap *= u_far_plane;
+        float depth_in_cubemap = texture(u_shadowmaps_point, vec4(light_to_frag, i)).r;
+        depth_in_cubemap *= u_far_plane;
 
-    float bias = 0.05;
-    // TODO Soft shadows: Sample the nearby cube-texels
-    return length(light_to_frag) - bias > depth_in_cubemap ? 1.0 : 0.0; // 1 if shadowed
+        float bias = 0.05;
+        // TODO Soft shadows: Sample the nearby cube-texels
+        is_shadow += length(light_to_frag) - bias > depth_in_cubemap ? 1.0 : 0.0; // 1 if shadowed
+    }
+    return clamp(is_shadow, 0, 1);
+
+    /* vec3 light_to_frag = v2f_frag_world_pos - u_point_light_pos; */
+
+    /* float depth_in_cubemap = texture(u_shadowmap_point, light_to_frag).r; */
+    /* depth_in_cubemap *= u_far_plane; */
+
+    /* float bias = 0.05; */
+    /* // TODO Soft shadows: Sample the nearby cube-texels */
+    /* return length(light_to_frag) - bias > depth_in_cubemap ? 1.0 : 0.0; // 1 if shadowed */
 }
  
 float get_frag_brightness() {
     vec3 frag_to_directional_light = normalize(-u_directional_light_dir);
     float alignment_with_directional_light = max(dot(v2f_normal, frag_to_directional_light), 0.0);
 
-    vec3 frag_to_point_light = normalize(u_point_light_pos - v2f_frag_world_pos);
-    float alignment_with_point_light = max(dot(v2f_normal, frag_to_point_light), 0.0);
-    float distance_to_point_light = distance(u_point_light_pos, v2f_frag_world_pos);
-    float point_light_brightness = alignment_with_point_light * u_point_light_intensity / (u_point_light_attenuation * distance_to_point_light);
+    float point_light_brightness = 0;
+    for (int i = 0; i < LIGHT_COUNT; i++) {
+        PointLight li = u_point_lights[i];
+        vec3 frag_to_point_light = normalize(li.position - v2f_frag_world_pos);
+        float alignment_with_point_light = max(dot(v2f_normal, frag_to_point_light), 0.0);
+        float distance_to_point_light = distance(li.position, v2f_frag_world_pos);
+        point_light_brightness += alignment_with_point_light * li.intensity
+            / (li.attenuation * distance_to_point_light);
+    }
 
     return max(point_light_brightness + alignment_with_directional_light, 0.1);
 }

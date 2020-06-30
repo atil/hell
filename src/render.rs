@@ -52,8 +52,15 @@ impl Renderer {
             FAR_PLANE,
         );
         let directional_light = DirectionalLight::new();
-        let point_light = PointLight::new(Point3::new(24.0, 2.0, -3.0), 1.0, 0.2);
-        let _point_light_2 = PointLight::new(Point3::new(34.0, 2.0, -3.0), 1.0, 0.2);
+
+        let point_light_cubemap_handle = unsafe { point_light::create_cubemap_array() };
+        let point_light = PointLight::new(
+            Point3::new(24.0, 2.0, -3.0),
+            1.0,
+            0.2,
+            point_light_cubemap_handle,
+            0,
+        );
 
         let world_shader = Shader::from_file("src/shaders/triangle.glsl", false)
             .expect("\nProblem loading world shader\n");
@@ -69,15 +76,15 @@ impl Renderer {
             world_shader.set_used();
             world_shader.set_i32("u_texture0", 0);
             world_shader.set_i32("u_shadowmap_directional", 1);
-            world_shader.set_i32("u_shadowmap_point", 2);
+            world_shader.set_i32("u_shadowmaps_point", 2);
             world_shader.set_vec3(
-                "u_point_light_pos",
+                "u_point_lights[0].position",
                 point_light.position.x,
                 point_light.position.y,
                 point_light.position.z,
             );
-            world_shader.set_f32("u_point_light_intensity", point_light.intensity);
-            world_shader.set_f32("u_point_light_attenuation", point_light.attenuation);
+            world_shader.set_f32("u_point_lights[0].intensity", point_light.intensity);
+            world_shader.set_f32("u_point_lights[0].attenuation", point_light.attenuation);
             world_shader.set_f32("u_far_plane", FAR_PLANE);
 
             world_shader.set_vec3(
@@ -98,13 +105,14 @@ impl Renderer {
                 directional_light.color.w,
             );
             world_shader.set_mat4("u_projection", projection);
+            check_gl_error("test1");
 
             // Zero is reserved for the diffuse texture
             // TODO: Changing the order of these two causes creepy-looking blotch stains
             // Look this up. This might bit us in the back
             // Is this the active texture swap in render()?
             gl::ActiveTexture(gl::TEXTURE2);
-            gl::BindTexture(gl::TEXTURE_CUBE_MAP, point_light.depth_cubemap_handle);
+            gl::BindTexture(gl::TEXTURE_CUBE_MAP_ARRAY, point_light.depth_cubemap_handle);
             gl::ActiveTexture(gl::TEXTURE1);
             gl::BindTexture(gl::TEXTURE_2D, directional_light.depth_texture_handle);
         }
@@ -123,7 +131,7 @@ impl Renderer {
     }
 
     pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
-        self.directional_light.fill_depth_texture(&objects);
+        // self.directional_light.fill_depth_texture(&objects);
 
         self.point_light.fill_depth_cubemap(&objects);
 
@@ -141,7 +149,10 @@ impl Renderer {
 
         // Setting the pointlight cubemap for rendering the world
         gl::ActiveTexture(gl::TEXTURE1);
-        gl::BindTexture(gl::TEXTURE_CUBE_MAP, self.point_light.depth_cubemap_handle);
+        gl::BindTexture(
+            gl::TEXTURE_CUBE_MAP_ARRAY,
+            self.point_light.depth_cubemap_handle,
+        );
 
         for obj in objects {
             self.world_shader.set_mat4("u_model", obj.transform);
@@ -149,7 +160,7 @@ impl Renderer {
         }
 
         // Fill the depth==1 fragments with sky texture
-        self.skybox.draw(player_v);
+        // self.skybox.draw(player_v);
 
         // Render from the draw framebuffer to the default framebuffer (the screen)
         gl::BindFramebuffer(gl::READ_FRAMEBUFFER, self.draw_fbo);

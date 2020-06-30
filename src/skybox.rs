@@ -31,6 +31,7 @@ impl Skybox {
             .expect("Problem loading skybox shader");
 
         unsafe {
+            render::check_gl_error("skybox1");
             gl::GenBuffers(1, &mut vbo);
             gl::GenVertexArrays(1, &mut vao);
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
@@ -54,6 +55,7 @@ impl Skybox {
             );
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
             cubemap_handle = load_cubemap_from_file("assets/skybox/gehenna");
+            render::check_gl_error("skybox2");
 
             shader.set_used();
             shader.set_mat4("u_projection", projection);

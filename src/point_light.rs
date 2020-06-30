@@ -4,6 +4,8 @@ use crate::render::{BufferHandle, TextureHandle};
 use crate::shader::*;
 use cgmath::*;
 
+pub const NUM_LIGHTS: u32 = 3;
+
 pub struct PointLight {
     pub position: Point3<f32>,
     pub intensity: f32,
@@ -15,16 +17,21 @@ pub struct PointLight {
 }
 
 impl PointLight {
-    pub fn new(position: Point3<f32>, intensity: f32, attenuation: f32) -> PointLight {
+    pub fn new(
+        position: Point3<f32>,
+        intensity: f32,
+        attenuation: f32,
+        depth_cubemap_handle: TextureHandle,
+        light_index: u32,
+    ) -> PointLight {
         let mut depth_fbo: BufferHandle = 0;
-        let depth_cubemap_handle: TextureHandle;
 
         let shader = Shader::from_file("src/shaders/shadowmap_depth_point.glsl", true)
             .expect("\nProblem loading point shadowmap depth shader\n");
 
         unsafe {
             gl::GenFramebuffers(1, &mut depth_fbo);
-            depth_cubemap_handle = PointLight::create_cubemap();
+            // depth_cubemap_handle = PointLight::create_cubemap_array();
             gl::BindFramebuffer(gl::FRAMEBUFFER, depth_fbo);
             gl::FramebufferTexture(
                 gl::FRAMEBUFFER,
@@ -35,6 +42,8 @@ impl PointLight {
             gl::ReadBuffer(gl::NONE);
             gl::DrawBuffer(gl::NONE);
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+
+            render::check_gl_error("point_light_init");
 
             let proj = cgmath::perspective(
                 cgmath::Deg(90.0),
@@ -85,6 +94,7 @@ impl PointLight {
             shader.set_mat4("u_shadow_matrices[5]", proj * v5);
             shader.set_f32("u_far_plane", render::FAR_PLANE);
             shader.set_vec3("u_light_pos", pos.x, pos.y, pos.z);
+            shader.set_i32("u_light_index", light_index as i32);
         }
 
         PointLight {
@@ -155,4 +165,49 @@ impl PointLight {
         );
         cubemap_handle
     }
+}
+
+pub unsafe fn create_cubemap_array() -> TextureHandle {
+    let mut cubemap_array_handle = 0;
+    gl::GenTextures(1, &mut cubemap_array_handle);
+    gl::BindTexture(gl::TEXTURE_CUBE_MAP_ARRAY, cubemap_array_handle);
+    gl::TexParameteri(
+        gl::TEXTURE_CUBE_MAP_ARRAY,
+        gl::TEXTURE_MIN_FILTER,
+        gl::LINEAR as i32,
+    );
+    gl::TexParameteri(
+        gl::TEXTURE_CUBE_MAP_ARRAY,
+        gl::TEXTURE_MAG_FILTER,
+        gl::LINEAR as i32,
+    );
+    gl::TexParameteri(
+        gl::TEXTURE_CUBE_MAP_ARRAY,
+        gl::TEXTURE_WRAP_S,
+        gl::CLAMP_TO_EDGE as i32,
+    );
+    gl::TexParameteri(
+        gl::TEXTURE_CUBE_MAP_ARRAY,
+        gl::TEXTURE_WRAP_T,
+        gl::CLAMP_TO_EDGE as i32,
+    );
+    gl::TexParameteri(
+        gl::TEXTURE_CUBE_MAP_ARRAY,
+        gl::TEXTURE_WRAP_R,
+        gl::CLAMP_TO_EDGE as i32,
+    );
+    gl::TexImage3D(
+        gl::TEXTURE_CUBE_MAP_ARRAY,
+        0,
+        gl::DEPTH_COMPONENT as i32,
+        render::SHADOWMAP_SIZE,
+        render::SHADOWMAP_SIZE,
+        (6 * NUM_LIGHTS) as i32,
+        0,
+        gl::DEPTH_COMPONENT,
+        gl::FLOAT,
+        std::ptr::null(),
+    );
+
+    cubemap_array_handle
 }
