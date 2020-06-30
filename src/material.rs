@@ -1,6 +1,6 @@
 extern crate tobj;
 use crate::render;
-use crate::render::{BufferHandle, TextureHandle};
+use crate::render::BufferHandle;
 use crate::texture;
 use gl::types::*;
 

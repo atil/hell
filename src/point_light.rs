@@ -10,7 +10,6 @@ pub struct PointLight {
     pub position: Point3<f32>,
     pub intensity: f32,
     pub attenuation: f32,
-    pub depth_cubemap_handle: TextureHandle,
 
     fbo: BufferHandle,
     shader: Shader,
@@ -31,7 +30,6 @@ impl PointLight {
 
         unsafe {
             gl::GenFramebuffers(1, &mut depth_fbo);
-            // depth_cubemap_handle = PointLight::create_cubemap_array();
             gl::BindFramebuffer(gl::FRAMEBUFFER, depth_fbo);
             gl::FramebufferTexture(
                 gl::FRAMEBUFFER,
@@ -103,7 +101,6 @@ impl PointLight {
             attenuation: attenuation,
             fbo: depth_fbo,
             shader: shader,
-            depth_cubemap_handle: depth_cubemap_handle,
         }
     }
 

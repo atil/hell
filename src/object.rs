@@ -12,6 +12,8 @@ pub struct Object<'a> {
 
     // This is a list of transformed triangles
     // It's good to have this cached for static geometry
+    // For dynamic objects, the better way would be multiplying the mesh triangles with the
+    // transform when it's queried
     pub triangles: Vec<Triangle>,
 }
 

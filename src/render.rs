@@ -22,8 +22,8 @@ pub struct Renderer {
     gl_context: sdl2::video::GLContext,
     directional_light: DirectionalLight,
     skybox: Skybox,
-    point_light: PointLight,
-
+    point_lights: Vec<PointLight>,
+    point_light_cubemap_handle: TextureHandle,
     world_shader: Shader,
     draw_fbo: BufferHandle,
 }
@@ -54,13 +54,22 @@ impl Renderer {
         let directional_light = DirectionalLight::new();
 
         let point_light_cubemap_handle = unsafe { point_light::create_cubemap_array() };
-        let point_light = PointLight::new(
+        let point_light1 = PointLight::new(
             Point3::new(24.0, 2.0, -3.0),
             1.0,
             0.2,
             point_light_cubemap_handle,
             0,
         );
+        let point_light2 = PointLight::new(
+            Point3::new(40.0, 2.0, -3.0),
+            1.0,
+            0.2,
+            point_light_cubemap_handle,
+            0,
+        );
+
+        let point_lights = vec![point_light2, point_light1];
 
         let world_shader = Shader::from_file("src/shaders/triangle.glsl", false)
             .expect("\nProblem loading world shader\n");
@@ -77,14 +86,25 @@ impl Renderer {
             world_shader.set_i32("u_texture0", 0);
             world_shader.set_i32("u_shadowmap_directional", 1);
             world_shader.set_i32("u_shadowmaps_point", 2);
-            world_shader.set_vec3(
-                "u_point_lights[0].position",
-                point_light.position.x,
-                point_light.position.y,
-                point_light.position.z,
-            );
-            world_shader.set_f32("u_point_lights[0].intensity", point_light.intensity);
-            world_shader.set_f32("u_point_lights[0].attenuation", point_light.attenuation);
+            world_shader.set_i32("u_point_light_count", point_lights.len() as i32);
+
+            for (i, point_light) in point_lights.iter().enumerate() {
+                world_shader.set_vec3(
+                    format!("u_point_lights[{}].position", i).as_str(),
+                    point_light.position.x,
+                    point_light.position.y,
+                    point_light.position.z,
+                );
+                world_shader.set_f32(
+                    format!("u_point_lights[{}].intensity", i).as_str(),
+                    point_light.intensity,
+                );
+                world_shader.set_f32(
+                    format!("u_point_lights[{}].attenuation", i).as_str(),
+                    point_light.attenuation,
+                );
+            }
+
             world_shader.set_f32("u_far_plane", FAR_PLANE);
 
             world_shader.set_vec3(
@@ -112,7 +132,7 @@ impl Renderer {
             // Look this up. This might bit us in the back
             // Is this the active texture swap in render()?
             gl::ActiveTexture(gl::TEXTURE2);
-            gl::BindTexture(gl::TEXTURE_CUBE_MAP_ARRAY, point_light.depth_cubemap_handle);
+            gl::BindTexture(gl::TEXTURE_CUBE_MAP_ARRAY, point_light_cubemap_handle);
             gl::ActiveTexture(gl::TEXTURE1);
             gl::BindTexture(gl::TEXTURE_2D, directional_light.depth_texture_handle);
         }
@@ -123,7 +143,8 @@ impl Renderer {
             world_shader: world_shader,
 
             directional_light: directional_light,
-            point_light: point_light,
+            point_lights: point_lights,
+            point_light_cubemap_handle: point_light_cubemap_handle,
 
             skybox: Skybox::new(projection),
             draw_fbo: draw_fbo,
@@ -133,7 +154,9 @@ impl Renderer {
     pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
         // self.directional_light.fill_depth_texture(&objects);
 
-        self.point_light.fill_depth_cubemap(&objects);
+        for point_light in &mut self.point_lights {
+            point_light.fill_depth_cubemap(&objects);
+        }
 
         // Render world to backbuffer
         gl::BindFramebuffer(gl::FRAMEBUFFER, self.draw_fbo);
@@ -149,10 +172,7 @@ impl Renderer {
 
         // Setting the pointlight cubemap for rendering the world
         gl::ActiveTexture(gl::TEXTURE1);
-        gl::BindTexture(
-            gl::TEXTURE_CUBE_MAP_ARRAY,
-            self.point_light.depth_cubemap_handle,
-        );
+        gl::BindTexture(gl::TEXTURE_CUBE_MAP_ARRAY, self.point_light_cubemap_handle);
 
         for obj in objects {
             self.world_shader.set_mat4("u_model", obj.transform);
