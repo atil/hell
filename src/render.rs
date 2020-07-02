@@ -24,6 +24,7 @@ pub struct Renderer {
     skybox: Skybox,
     point_lights: Vec<PointLight>,
     point_light_cubemap_handle: TextureHandle,
+    point_light_fbo_handle: BufferHandle,
     world_shader: Shader,
     draw_fbo: BufferHandle,
 }
@@ -54,22 +55,14 @@ impl Renderer {
         let directional_light = DirectionalLight::new();
 
         let point_light_cubemap_handle = unsafe { point_light::create_cubemap_array() };
-        let point_light1 = PointLight::new(
-            Point3::new(24.0, 2.0, -3.0),
-            1.0,
-            0.2,
-            point_light_cubemap_handle,
-            0,
-        );
-        let point_light2 = PointLight::new(
-            Point3::new(40.0, 2.0, -3.0),
-            1.0,
-            0.2,
-            point_light_cubemap_handle,
-            0,
-        );
+        let point_light_fbo_handle =
+            unsafe { point_light::create_point_light_framebuffer(point_light_cubemap_handle) };
 
-        let point_lights = vec![point_light2, point_light1];
+        let point_light1 = PointLight::new(Point3::new(24.0, 2.0, -3.0), 3.0, 0.2, 0);
+        let point_light2 = PointLight::new(Point3::new(27.0, 2.0, 3.0), 1.0, 0.2, 1);
+        let point_light3 = PointLight::new(Point3::new(17.0, 2.0, 3.0), 1.0, 0.2, 2);
+
+        let point_lights = vec![point_light1, point_light2, point_light3];
 
         let world_shader = Shader::from_file("src/shaders/triangle.glsl", false)
             .expect("\nProblem loading world shader\n");
@@ -145,6 +138,7 @@ impl Renderer {
             directional_light: directional_light,
             point_lights: point_lights,
             point_light_cubemap_handle: point_light_cubemap_handle,
+            point_light_fbo_handle: point_light_fbo_handle,
 
             skybox: Skybox::new(projection),
             draw_fbo: draw_fbo,
@@ -152,11 +146,15 @@ impl Renderer {
     }
 
     pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
-        // self.directional_light.fill_depth_texture(&objects);
+        self.directional_light.fill_depth_texture(&objects);
 
+        gl::Viewport(0, 0, render::SHADOWMAP_SIZE, render::SHADOWMAP_SIZE);
+        gl::BindFramebuffer(gl::FRAMEBUFFER, self.point_light_fbo_handle);
+        gl::Clear(gl::DEPTH_BUFFER_BIT);
         for point_light in &mut self.point_lights {
             point_light.fill_depth_cubemap(&objects);
         }
+        gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
 
         // Render world to backbuffer
         gl::BindFramebuffer(gl::FRAMEBUFFER, self.draw_fbo);
@@ -180,7 +178,7 @@ impl Renderer {
         }
 
         // Fill the depth==1 fragments with sky texture
-        // self.skybox.draw(player_v);
+        self.skybox.draw(player_v);
 
         // Render from the draw framebuffer to the default framebuffer (the screen)
         gl::BindFramebuffer(gl::READ_FRAMEBUFFER, self.draw_fbo);

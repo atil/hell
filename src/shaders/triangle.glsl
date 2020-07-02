@@ -52,7 +52,7 @@ struct PointLight {
 
 uniform samplerCubeArray u_shadowmaps_point;
 
-#define MAX_LIGHT_COUNT 1
+#define MAX_LIGHT_COUNT 3
 
 uniform PointLight u_point_lights[MAX_LIGHT_COUNT];
 uniform int u_point_light_count;
@@ -88,12 +88,8 @@ float is_in_shadow_directional() {
 }
 
 float is_in_shadow_point() {
-    float is_shadow = 0;
-    for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
-        if (i == u_point_light_count) {
-            // TODO #PERF: Better way to do this skip?
-            break;
-        }
+    float is_shadow = 1;
+    for (int i = 0; i < u_point_light_count; i++) {
 
         vec3 light_to_frag = v2f_frag_world_pos - u_point_lights[i].position;
         float depth_in_cubemap = texture(u_shadowmaps_point, vec4(light_to_frag, i)).r;
@@ -101,9 +97,12 @@ float is_in_shadow_point() {
 
         float bias = 0.05;
         // TODO Soft shadows: Sample the nearby cube-texels
-        is_shadow += length(light_to_frag) - bias > depth_in_cubemap ? 1.0 : 0.0; // 1 if shadowed
+        if (length(light_to_frag) - bias < depth_in_cubemap) {
+            is_shadow = 0;
+        }
+
     }
-    return clamp(is_shadow, 0, 1);
+    return is_shadow;
 }
  
 float get_frag_brightness() {
@@ -111,14 +110,13 @@ float get_frag_brightness() {
     float alignment_with_directional_light = max(dot(v2f_normal, frag_to_directional_light), 0.0);
 
     float point_light_brightness = 0;
-    for (int i = 0; i < MAX_LIGHT_COUNT; i++) {
-        if (i == u_point_light_count) {
-            break;
-        }
+    for (int i = 0; i < u_point_light_count; i++) {
+
         PointLight li = u_point_lights[i];
         vec3 frag_to_point_light = normalize(li.position - v2f_frag_world_pos);
         float alignment_with_point_light = max(dot(v2f_normal, frag_to_point_light), 0.0);
         float distance_to_point_light = distance(li.position, v2f_frag_world_pos);
+
         point_light_brightness += alignment_with_point_light * li.intensity
             / (li.attenuation * distance_to_point_light);
     }
