@@ -52,7 +52,7 @@ struct PointLight {
 
 uniform samplerCubeArray u_shadowmaps_point;
 
-#define MAX_LIGHT_COUNT 3
+#define MAX_LIGHT_COUNT 2
 
 uniform PointLight u_point_lights[MAX_LIGHT_COUNT];
 uniform int u_point_light_count;
@@ -65,9 +65,9 @@ in vec3 v2f_normal;
 
 out vec4 out_color;
 
-#define SAMPLE_SIZE 1
+#define DIRECTIONAL_LIGHT_SAMPLES 1
 
-float is_in_shadow_directional() {
+float get_t_shadow_directional() {
     vec3 light_dir = -normalize(u_directional_light_dir);
     vec3 pos = v2f_frag_light_space_pos.xyz * 0.5 + 0.5;
     pos.z = min(pos.z, 1.0);
@@ -78,31 +78,47 @@ float is_in_shadow_directional() {
 
     float shadow = 0.0;
     vec2 texel_size = 1.0 / textureSize(u_shadowmap_directional, 0);
-    for(int x = -SAMPLE_SIZE; x <= SAMPLE_SIZE; x++) {
-        for(int y = -SAMPLE_SIZE; y <= SAMPLE_SIZE; y++) {
+    for(int x = -DIRECTIONAL_LIGHT_SAMPLES; x <= DIRECTIONAL_LIGHT_SAMPLES; x++) {
+        for(int y = -DIRECTIONAL_LIGHT_SAMPLES; y <= DIRECTIONAL_LIGHT_SAMPLES; y++) {
             float pcf_depth = texture(u_shadowmap_directional, pos.xy + vec2(x, y) * texel_size).r; 
             shadow += (pcf_depth + bias) < pos.z ? 1.0 : 0.0; // 1 if shadowed
         }    
     }
-    return shadow / ((SAMPLE_SIZE + 2) * (SAMPLE_SIZE + 2));
-}
+    return shadow / ((DIRECTIONAL_LIGHT_SAMPLES + 2) * (DIRECTIONAL_LIGHT_SAMPLES + 2));
+} 
 
-float is_in_shadow_point() {
-    float is_shadow = 1;
+vec3 sample_offset_directions[20] = vec3[]
+(
+   vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
+   vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+   vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+   vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+   vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+);  
+
+float get_t_shadow_point() {
+
+    float shadow_amount = 0.0;
+
     for (int i = 0; i < u_point_light_count; i++) {
-
         vec3 light_to_frag = v2f_frag_world_pos - u_point_lights[i].position;
-        float depth_in_cubemap = texture(u_shadowmaps_point, vec4(light_to_frag, i)).r;
-        depth_in_cubemap *= u_far_plane;
+        float light_to_frag_dist = length(light_to_frag) - 0.0005;
 
-        float bias = 0.05;
-        // TODO Soft shadows: Sample the nearby cube-texels
-        if (length(light_to_frag) - bias < depth_in_cubemap) {
-            is_shadow = 0;
+        // Larger sample distance as the fragment is further away from the light
+        float disk_radius = 0.002;// * light_to_frag_dist;
+
+        for (int i = 0; i < 20; i++) {
+            vec3 sample_dir = light_to_frag + sample_offset_directions[i] * disk_radius;
+            float depth_in_cubemap = texture(u_shadowmaps_point, vec4(sample_dir, i)).r;
+            depth_in_cubemap *= u_far_plane;
+            if (light_to_frag_dist > depth_in_cubemap) {
+                shadow_amount += 1;
+            }
         }
 
     }
-    return is_shadow;
+
+    return shadow_amount / (float(20) * u_point_light_count);
 }
  
 float get_frag_brightness() {
@@ -128,12 +144,14 @@ void main() {
     vec4 tex_color = texture(u_texture0, v2f_tex_coord);
 
     tex_color = vec4(tex_color.rgb * get_frag_brightness(), 1.0);
-
-    float shadow = is_in_shadow_directional();
-    shadow += is_in_shadow_point();
-
     vec4 shadowed_tex_color = vec4(tex_color.rgb * 0.2, 1.0);
 
-    out_color = (1.0 - shadow) * tex_color + shadow * shadowed_tex_color;
+    float t_shadow = get_t_shadow_directional();
+    t_shadow = get_t_shadow_point();
+
+    out_color = mix(tex_color, shadowed_tex_color, t_shadow);
+
+    /* t_shadow *= 0.001; */
+    /* out_color = vec4(t_shadow, t_shadow, t_shadow, 1); */
 }
 #endif

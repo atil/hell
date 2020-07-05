@@ -4,8 +4,6 @@ use crate::render::{BufferHandle, TextureHandle};
 use crate::shader::*;
 use cgmath::*;
 
-pub const NUM_LIGHTS: u32 = 3;
-
 pub struct PointLight {
     pub position: Point3<f32>,
     pub intensity: f32,
@@ -111,7 +109,7 @@ pub unsafe fn create_point_light_framebuffer(depth_cubemap_handle: TextureHandle
     depth_fbo
 }
 
-pub unsafe fn create_cubemap_array() -> TextureHandle {
+pub unsafe fn create_cubemap_array(point_light_count: usize) -> TextureHandle {
     let mut cubemap_array_handle = 0;
     gl::GenTextures(1, &mut cubemap_array_handle);
     gl::BindTexture(gl::TEXTURE_CUBE_MAP_ARRAY, cubemap_array_handle);
@@ -146,7 +144,7 @@ pub unsafe fn create_cubemap_array() -> TextureHandle {
         gl::DEPTH_COMPONENT as i32,
         render::SHADOWMAP_SIZE,
         render::SHADOWMAP_SIZE,
-        (6 * NUM_LIGHTS) as i32,
+        (6 * point_light_count) as i32,
         0,
         gl::DEPTH_COMPONENT,
         gl::FLOAT,
