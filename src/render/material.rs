@@ -1,7 +1,6 @@
 extern crate tobj;
-use crate::render;
-use crate::render::BufferHandle;
-use crate::texture;
+use crate::render::texture;
+use crate::render::*;
 use gl::types::*;
 
 #[derive(Copy, Clone, Debug)]
@@ -92,7 +91,7 @@ impl Material {
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
             gl::BindVertexArray(0);
 
-            render::check_gl_error("material");
+            check_gl_error("material");
         }
 
         Material {

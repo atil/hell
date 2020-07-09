@@ -1,7 +1,7 @@
-use crate::material;
-use crate::material::Material;
 use crate::mesh;
 use crate::mesh::Mesh;
+use crate::render::material;
+use crate::render::material::Material;
 use std::path::Path;
 
 pub fn load_obj(path: &str) -> (Vec<Mesh>, Vec<Material>) {

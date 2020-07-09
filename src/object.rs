@@ -1,6 +1,6 @@
 use crate::geom::Triangle;
-use crate::material::Material;
 use crate::mesh::Mesh;
+use crate::render::material::Material;
 use cgmath::*;
 
 pub struct Object<'a> {

@@ -1,7 +1,7 @@
 use crate::object::Object;
 use crate::render;
 use crate::render::{BufferHandle, TextureHandle};
-use crate::shader::*;
+use crate::render::shader::*;
 use cgmath::*;
 
 pub struct PointLight {

@@ -1,6 +1,6 @@
-use crate::render;
+use crate::render::shader::*;
+use crate::render::*;
 use crate::render::{BufferHandle, TextureHandle};
-use crate::shader::*;
 use cgmath::*;
 use image::GenericImageView;
 use std::path::Path;
@@ -31,13 +31,13 @@ impl Skybox {
             .expect("Problem loading skybox shader");
 
         unsafe {
-            render::check_gl_error("skybox1");
+            check_gl_error("skybox1");
             gl::GenBuffers(1, &mut vbo);
             gl::GenVertexArrays(1, &mut vao);
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (VERTEX_DATA.len() * render::SIZEOF_FLOAT) as isize,
+                (VERTEX_DATA.len() * SIZEOF_FLOAT) as isize,
                 VERTEX_DATA.as_ptr() as *const std::ffi::c_void,
                 gl::STATIC_DRAW,
             );
@@ -50,12 +50,12 @@ impl Skybox {
                 3,
                 gl::FLOAT,
                 gl::FALSE,
-                (3 * render::SIZEOF_FLOAT) as i32,
+                (3 * SIZEOF_FLOAT) as i32,
                 std::ptr::null(),
             );
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
             cubemap_handle = load_cubemap_from_file("assets/skybox/gehenna");
-            render::check_gl_error("skybox2");
+            check_gl_error("skybox2");
 
             shader.set_used();
             shader.set_mat4("u_projection", projection);

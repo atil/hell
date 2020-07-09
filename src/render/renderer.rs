@@ -1,20 +1,11 @@
-use crate::directional_light::*;
 use crate::object::Object;
-use crate::point_light::*;
-use crate::shader::*;
-use crate::skybox::Skybox;
+use crate::render::directional_light::*;
+use crate::render::point_light::*;
+use crate::render::shader::*;
+use crate::render::skybox::Skybox;
+use crate::render::*;
 use crate::*;
 use cgmath::*;
-
-pub type TextureHandle = u32;
-pub type BufferHandle = u32;
-
-pub const SCREEN_SIZE: (u32, u32) = (1280, 720);
-pub const SHADOWMAP_SIZE: i32 = 2048;
-pub const DRAW_FRAMEBUFFER_SIZE: (u32, u32) = (640, 360);
-pub const SIZEOF_FLOAT: usize = std::mem::size_of::<f32>();
-pub const FAR_PLANE: f32 = 1000.0;
-pub const NEAR_PLANE: f32 = 0.1;
 
 #[allow(dead_code)] // The glContext needs to be kept alive, even though not being read
 pub struct Renderer {
@@ -61,9 +52,10 @@ impl Renderer {
         let point_lights = vec![point_light1, point_light2];
 
         let point_light_cubemap_handle =
-            unsafe { point_light::create_cubemap_array(point_lights.len()) };
-        let point_light_fbo_handle =
-            unsafe { point_light::create_point_light_framebuffer(point_light_cubemap_handle) };
+            unsafe { render::point_light::create_cubemap_array(point_lights.len()) };
+        let point_light_fbo_handle = unsafe {
+            render::point_light::create_point_light_framebuffer(point_light_cubemap_handle)
+        };
 
         let world_shader = Shader::from_file("src/shaders/triangle.glsl", false)
             .expect("\nProblem loading world shader\n");
@@ -201,14 +193,6 @@ impl Renderer {
 
     pub fn finish_render(&mut self) {
         self.window.gl_swap_window();
-    }
-}
-
-pub unsafe fn check_gl_error(tag: &str) {
-    let error = gl::GetError();
-
-    if error != 0 {
-        println!("[{0}] error: {1}", tag, error);
     }
 }
 

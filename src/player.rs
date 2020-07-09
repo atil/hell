@@ -2,7 +2,7 @@ use crate::geom::*;
 use crate::keys::Keys;
 use crate::object::Object;
 use crate::physics::*;
-use crate::ui::Ui;
+use crate::render::ui::Ui;
 use cgmath::*;
 use sdl2::keyboard::Keycode;
 

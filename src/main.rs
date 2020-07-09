@@ -8,29 +8,21 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 
 mod assets;
-mod directional_light;
 mod geom;
 mod keys;
-mod material;
 mod math;
 mod mesh;
 mod object;
 mod physics;
 mod player;
-mod point_light;
 mod render;
-mod shader;
-mod skybox;
-mod texture;
 mod time;
-mod ui;
-mod ui_batch;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
 
-    let mut renderer = render::Renderer::init(&sdl_context);
-    let mut ui = ui::Ui::init();
+    let mut renderer = render::renderer::Renderer::init(&sdl_context);
+    let mut ui = render::ui::Ui::init();
     let mut time = time::Time::new(&sdl_context);
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut keys = keys::Keys::new();

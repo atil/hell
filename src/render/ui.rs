@@ -1,10 +1,9 @@
-use crate::render;
-use crate::render::TextureHandle;
-use crate::shader::*;
-use crate::texture;
-use crate::ui_batch::*;
+use crate::render::shader::*;
+use crate::render::texture;
+use crate::render::ui_batch::*;
+use crate::render::*;
 use gl::types::*;
-use image::{DynamicImage, GenericImageView, Rgba};
+use image::{DynamicImage, Rgba};
 use rusttype::{point, Font, Scale};
 
 pub struct Ui<'a> {
@@ -15,7 +14,7 @@ pub struct Ui<'a> {
 
 impl Ui<'_> {
     pub fn init() -> Self {
-        let font_data = include_bytes!("../assets/RobotoMono-Regular.ttf");
+        let font_data = include_bytes!("../../assets/RobotoMono-Regular.ttf");
         let font = Font::try_from_bytes(font_data as &[u8]).expect("Error constructing Font");
         let _texture1 = texture::load_from_file("assets/prototype.png");
         let texture2 = create_from_text("Progress", 32.0, &font);
@@ -53,12 +52,7 @@ impl Ui<'_> {
     pub unsafe fn draw(&mut self) {
         self.shader.set_used();
 
-        gl::Viewport(
-            0,
-            0,
-            render::SCREEN_SIZE.0 as i32,
-            render::SCREEN_SIZE.1 as i32,
-        );
+        gl::Viewport(0, 0, SCREEN_SIZE.0 as i32, SCREEN_SIZE.1 as i32);
 
         for batch in self.batches.iter() {
             batch.draw();

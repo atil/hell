@@ -1,7 +1,6 @@
 use crate::object::Object;
-use crate::render;
-use crate::render::{BufferHandle, TextureHandle};
-use crate::shader::*;
+use crate::render::shader::*;
+use crate::render::*;
 use cgmath::*;
 
 pub struct DirectionalLight {
@@ -24,7 +23,7 @@ impl DirectionalLight {
             Point3::new(0.0, 0.0, 0.0),
             Vector3::unit_y(),
         );
-        let projection = cgmath::ortho(-s, s, -s, s, render::NEAR_PLANE, render::FAR_PLANE);
+        let projection = cgmath::ortho(-s, s, -s, s, NEAR_PLANE, FAR_PLANE);
         let color = Vector4::new(0.2, 0.1, 0.0, 1.0);
 
         let mut depth_fbo: BufferHandle = 0;
@@ -69,7 +68,7 @@ impl DirectionalLight {
 
     pub unsafe fn fill_depth_texture(&mut self, objects: &Vec<Object>) {
         self.shader.set_used();
-        gl::Viewport(0, 0, render::SHADOWMAP_SIZE, render::SHADOWMAP_SIZE);
+        gl::Viewport(0, 0, SHADOWMAP_SIZE, SHADOWMAP_SIZE);
         gl::BindFramebuffer(gl::FRAMEBUFFER, self.fbo);
         gl::Clear(gl::DEPTH_BUFFER_BIT);
         for obj in objects {
@@ -107,8 +106,8 @@ impl DirectionalLight {
             gl::TEXTURE_2D,
             0,
             gl::DEPTH_COMPONENT as i32,
-            render::SHADOWMAP_SIZE as i32,
-            render::SHADOWMAP_SIZE as i32,
+            SHADOWMAP_SIZE as i32,
+            SHADOWMAP_SIZE as i32,
             0,
             gl::DEPTH_COMPONENT,
             gl::FLOAT,
