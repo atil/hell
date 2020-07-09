@@ -63,11 +63,11 @@ fn main() {
                 .collect(),
         );
 
-        player.tick(&keys, (mouse_x, mouse_y), &objects, &mut ui, dt);
+        player.tick(&keys, (mouse_x, mouse_y), &objects, dt);
 
         unsafe {
             renderer.render(&objects, player.get_view_matrix());
-            ui.draw();
+            ui.draw(&player);
         }
 
         renderer.finish_render();

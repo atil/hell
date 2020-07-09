@@ -2,7 +2,6 @@ use crate::geom::*;
 use crate::keys::Keys;
 use crate::object::Object;
 use crate::physics::*;
-use crate::render::ui::Ui;
 use cgmath::*;
 use sdl2::keyboard::Keycode;
 
@@ -18,7 +17,7 @@ const JUMP_FORCE: f32 = 0.01;
 const START_POSITION: Point3<f32> = Point3::new(-5.0, 2.0, 5.0);
 
 pub struct Player {
-    velocity: Vector3<f32>,
+    pub velocity: Vector3<f32>,
     position: Point3<f32>,
     forward: Vector3<f32>,
     prev_is_grounded: bool,
@@ -43,7 +42,6 @@ impl Player {
         keys: &Keys,
         mouse: (f32, f32),
         collision_objects: &Vec<Object>,
-        ui: &mut Ui,
         dt: f32,
     ) {
         mouse_look(&mut self.forward, mouse);
@@ -113,10 +111,6 @@ impl Player {
             self.velocity = Vector3::zero();
             self.position = START_POSITION;
         }
-
-        let velocity_string = format!("{:.3}", horz(&self.velocity).magnitude());
-        // println!("{:?} {:?} {}", self.position, displacement, is_grounded);
-        ui.draw_text(velocity_string.as_str());
     }
 
     pub fn get_view_matrix(&self) -> Matrix4<f32> {

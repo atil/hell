@@ -1,7 +1,10 @@
+use crate::geom::*;
+use crate::player::Player;
 use crate::render::shader::*;
 use crate::render::texture;
 use crate::render::ui_batch::*;
 use crate::render::*;
+use cgmath::*;
 use gl::types::*;
 use image::{DynamicImage, Rgba};
 use rusttype::{point, Font, Scale};
@@ -42,22 +45,23 @@ impl Ui<'_> {
         }
     }
 
-    pub fn draw_text(&mut self, text: &str) {
+    fn draw_text(&mut self, text: &str) {
         let rect = Rect::new(-0.9, 0.9, 0.2, 0.2); // TODO: Provide this from the outside
         let texture = create_from_text(text, 32.0, &self.font);
 
         self.batches.push(Batch::new(vec![rect], texture, true));
     }
 
-    pub unsafe fn draw(&mut self) {
+    pub unsafe fn draw(&mut self, player: &Player) {
         self.shader.set_used();
 
-        gl::Viewport(0, 0, SCREEN_SIZE.0 as i32, SCREEN_SIZE.1 as i32);
+        let velocity_string = format!("{:.3}", horz(&player.velocity).magnitude());
+        self.draw_text(velocity_string.as_str());
 
+        gl::Viewport(0, 0, SCREEN_SIZE.0 as i32, SCREEN_SIZE.1 as i32);
         for batch in self.batches.iter() {
             batch.draw();
         }
-
         self.batches.retain(|b| !b.draw_single_frame);
     }
 }
