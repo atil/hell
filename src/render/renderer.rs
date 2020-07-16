@@ -47,7 +47,6 @@ impl Renderer {
 
         let point_light1 = PointLight::new(Point3::new(24.0, 2.0, -3.0), 2.0, 0.5, 0);
         let point_light2 = PointLight::new(Point3::new(-1.0, 2.0, -1.0), 0.5, 0.01, 1);
-        let point_light3 = PointLight::new(Point3::new(17.0, 2.0, 3.0), 1.0, 0.2, 2);
 
         let point_lights = vec![point_light1, point_light2];
 
@@ -65,6 +64,8 @@ impl Renderer {
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
             gl::Enable(gl::BLEND);
+            gl::Enable(gl::CULL_FACE);
+            gl::CullFace(gl::BACK);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             gl::ClearColor(0.1, 0.05, 0.05, 1.0);
 
@@ -139,7 +140,8 @@ impl Renderer {
     }
 
     pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
-        // self.directional_light.fill_depth_texture(&objects);
+        gl::Disable(gl::CULL_FACE);
+        self.directional_light.fill_depth_texture(&objects);
 
         // Render to point-light cubemap array
         gl::Viewport(0, 0, render::SHADOWMAP_SIZE, render::SHADOWMAP_SIZE);
@@ -151,6 +153,7 @@ impl Renderer {
         gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
 
         // Render world to backbuffer
+        gl::Enable(gl::CULL_FACE);
         gl::BindFramebuffer(gl::FRAMEBUFFER, self.draw_fbo);
         self.world_shader.set_used();
         self.world_shader.set_mat4("u_view", player_v);

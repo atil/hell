@@ -69,17 +69,30 @@ out vec4 out_color;
 
 float get_t_shadow_directional() {
     vec3 light_dir = -normalize(u_directional_light_dir);
+
+    float alignment_with_directional_light = dot(v2f_normal, light_dir);
+    if (alignment_with_directional_light < 0.0) {
+        // Surface looking away from light is always in shadow
+        return 1.0;
+    }
+
     vec3 pos = v2f_frag_light_space_pos.xyz * 0.5 + 0.5;
     pos.z = min(pos.z, 1.0);
 
     // If the surface is perpendicular to the light direction
     // then it needs larger bias values
-    float bias = max(0.002 * (1.0 - dot(v2f_normal, light_dir)), 0.00001);
+    float bias = max(0.0005 * (1.0 - alignment_with_directional_light), 0.00001);
 
     float shadow = 0.0;
+
+    // Uncomment for hard directional shadows
+    /* float pcf_depth = texture(u_shadowmap_directional, pos.xy ).r; */ 
+    /* shadow += (pcf_depth + bias) < pos.z ? 1.0 : 0.0; // 1 if shadowed */
+    /* return shadow; */
+
     vec2 texel_size = 1.0 / textureSize(u_shadowmap_directional, 0);
-    for(int x = -DIRECTIONAL_LIGHT_SAMPLES; x <= DIRECTIONAL_LIGHT_SAMPLES; x++) {
-        for(int y = -DIRECTIONAL_LIGHT_SAMPLES; y <= DIRECTIONAL_LIGHT_SAMPLES; y++) {
+    for (int x = -DIRECTIONAL_LIGHT_SAMPLES; x <= DIRECTIONAL_LIGHT_SAMPLES; x++) {
+        for (int y = -DIRECTIONAL_LIGHT_SAMPLES; y <= DIRECTIONAL_LIGHT_SAMPLES; y++) {
             float pcf_depth = texture(u_shadowmap_directional, pos.xy + vec2(x, y) * texel_size).r; 
             shadow += (pcf_depth + bias) < pos.z ? 1.0 : 0.0; // 1 if shadowed
         }    
@@ -87,8 +100,7 @@ float get_t_shadow_directional() {
     return shadow / ((DIRECTIONAL_LIGHT_SAMPLES + 2) * (DIRECTIONAL_LIGHT_SAMPLES + 2));
 } 
 
-vec3 sample_offset_directions[20] = vec3[]
-(
+vec3 point_shadow_sample_offset_directions[20] = vec3[] (
    vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
    vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
    vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
@@ -106,7 +118,7 @@ float get_frag_brightness_from_light(PointLight light, int light_index) {
     // Larger sample distance as the fragment is further away from the light
     float disk_radius = POINT_SHADOW_SOFTNESS_WITH_DISTANCE * light_to_frag_dist;
     for (int i = 0; i < 20; i++) {
-        vec3 sample_dir = light_to_frag + sample_offset_directions[i] * disk_radius;
+        vec3 sample_dir = light_to_frag + point_shadow_sample_offset_directions[i] * disk_radius;
         float depth_in_cubemap = texture(u_shadowmaps_point, vec4(sample_dir, light_index)).r;
         depth_in_cubemap *= u_far_plane;
         if (light_to_frag_dist > depth_in_cubemap) {
@@ -130,9 +142,9 @@ void main() {
 
     vec4 shadowed_tex_color = vec4(tex_color.rgb * 0.05, 1.0);
 
-    // TODO: Add directional light here
-
     float brightness = 0.0;
+    brightness += mix(0.2, 0.0, get_t_shadow_directional());
+
     for (int i = 0; i < u_point_light_count; i++) {
         brightness += get_frag_brightness_from_light(u_point_lights[i], i);
     }
