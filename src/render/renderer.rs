@@ -45,10 +45,15 @@ impl Renderer {
         );
         let directional_light = DirectionalLight::new();
 
-        let point_light1 = PointLight::new(Point3::new(24.0, 2.0, -3.0), 2.0, 0.5, 0);
-        let point_light2 = PointLight::new(Point3::new(-1.0, 2.0, -1.0), 0.5, 0.01, 1);
+        let point_light1 = PointLight::new(Point3::new(24.0, 2.0, -3.0), 2.0, 0.25, 0);
+        let point_light2 =
+            PointLight::new(Point3::new(-82.10625, 2.5329967, 57.53004), 1.5, 0.05, 1);
+        let point_light3 =
+            PointLight::new(Point3::new(-35.36219, 1.324518, 73.998116), 1.5, 0.2, 2);
 
-        let point_lights = vec![point_light1, point_light2];
+        let point_light4 = PointLight::new(Point3::new(2.986008, 1.8637276, 50.22367), 1.0, 0.2, 3);
+
+        let point_lights = vec![point_light1, point_light2, point_light3, point_light4];
 
         let point_light_cubemap_handle =
             unsafe { render::point_light::create_cubemap_array(point_lights.len()) };

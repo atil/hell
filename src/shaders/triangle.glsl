@@ -52,7 +52,7 @@ struct PointLight {
 
 uniform samplerCubeArray u_shadowmaps_point;
 
-#define MAX_LIGHT_COUNT 2
+#define MAX_LIGHT_COUNT 10
 
 uniform PointLight u_point_lights[MAX_LIGHT_COUNT];
 uniform int u_point_light_count;
