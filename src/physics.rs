@@ -68,6 +68,9 @@ pub fn resolve_penetration(
     let mut player_shape = PlayerShape::new(player_pos, PLAYER_HEIGHT, PLAYER_CAPSULE_RADIUS);
     let mut total_displacement = Vector3::zero();
     for obj in collision_objects {
+        // TODO #PERF: We can do this multithreaded
+        // Technically, there _is_ an order which _might_ change the outcome of the calculation
+        // But we don't rely on that. We might as well send each triangle to a different thread
         for tri in &obj.triangles {
             if let Some(mut penet) = compute_penetration(player_shape, *tri) {
                 // Give an extra tiny push to the vertical displacement
@@ -124,7 +127,7 @@ pub fn grounded_check(
     let mut ground_normal = Vector3::zero();
     'all: for obj in objects {
         for tri in &obj.triangles {
-            // TODO: No need to run this loop if the velocity is zero
+            // TODO #PERF: No need to run this loop if the velocity is zero
             for ray_slot in &ray_origins {
                 if let Some(t) = ray_triangle_check(*ray_slot, ray_direction, *tri) {
                     if t < GROUNDED_HEIGHT {

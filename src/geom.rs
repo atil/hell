@@ -97,7 +97,7 @@ pub fn is_point_in_triangle(point: Point3<f32>, tri: Triangle) -> bool {
     in_between(a, 0.0, 1.0)
         && in_between(b, 0.0, 1.0)
         && in_between(c, 0.0, 1.0)
-        && approx(a + b + c, 1.0)
+        && abs_diff_eq!(a + b + c, 1.0)
 }
 
 pub fn get_closest_point_on_line_segment(
@@ -105,7 +105,7 @@ pub fn get_closest_point_on_line_segment(
     p0: Point3<f32>,
     p1: Point3<f32>,
 ) -> (Point3<f32>, f32, bool) {
-    // TODO: Lots of sqrt here
+    // TODO #PERF: Lots of sqrt here
     let line_segment_dir = (p1 - p0).normalize();
     let line_segment_length = (p1 - p0).magnitude();
 
@@ -131,7 +131,7 @@ pub fn ray_triangle_check(
     ray_dir: Vector3<f32>,
     triangle: Triangle,
 ) -> Option<f32> {
-    if approx(Vector3::dot(ray_dir, triangle.normal), 0.0) {
+    if abs_diff_eq!(Vector3::dot(ray_dir, triangle.normal), 0.0) {
         return None; // Parallel
     }
 
