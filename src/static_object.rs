@@ -3,10 +3,8 @@ use crate::mesh::Mesh;
 use crate::render::material::Material;
 use cgmath::*;
 
-pub struct Object<'a> {
-    // TODO: Static geometry won't have this as a variable
-    // It'll be fed in via the ctor
-    pub transform: Matrix4<f32>,
+pub struct StaticObject<'a> {
+    pub transform: Matrix4<f32>, // TODO: Get rid of this
     pub material: &'a Material,
     pub mesh: &'a Mesh,
 
@@ -17,13 +15,17 @@ pub struct Object<'a> {
     pub triangles: Vec<Triangle>,
 }
 
-impl<'a> Object<'a> {
-    pub fn new(mesh: &'a Mesh, material: &'a Material) -> Object<'a> {
-        Object {
-            transform: Matrix4::<f32>::identity(),
+impl<'a> StaticObject<'a> {
+    pub fn new(
+        mesh: &'a Mesh,
+        material: &'a Material,
+        transform: Matrix4<f32>,
+    ) -> StaticObject<'a> {
+        StaticObject {
+            transform: transform,
             material: material,
             mesh: mesh,
-            triangles: mesh.triangles.clone(),
+            triangles: mesh.triangles.clone(), // TODO: transform these by "transform" parameter
         }
     }
 

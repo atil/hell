@@ -1,6 +1,6 @@
 use crate::geom::*;
 use crate::keys::Keys;
-use crate::object::Object;
+use crate::static_object::StaticObject;
 use crate::physics::*;
 use cgmath::*;
 use sdl2::keyboard::Keycode;
@@ -41,7 +41,7 @@ impl Player {
         &mut self,
         keys: &Keys,
         mouse: (f32, f32),
-        collision_objects: &Vec<Object>,
+        static_objects: &Vec<StaticObject>,
         dt: f32,
     ) {
         mouse_look(&mut self.forward, mouse);
@@ -67,7 +67,7 @@ impl Player {
         );
 
         let (is_grounded, ground_normal) =
-            grounded_check(&collision_objects, self.position, horz_norm(&self.velocity));
+            grounded_check(&static_objects, self.position, horz_norm(&self.velocity));
 
         if is_grounded {
             // Ground move
@@ -102,7 +102,7 @@ impl Player {
 
         self.position += self.velocity * dt;
 
-        let displacement = resolve_penetration(&collision_objects, self.position);
+        let displacement = resolve_penetration(&static_objects, self.position);
         self.position += displacement;
         self.prev_is_grounded = is_grounded;
 

@@ -1,7 +1,7 @@
-use crate::object::Object;
 use crate::render;
 use crate::render::shader::*;
 use crate::render::{BufferHandle, TextureHandle};
+use crate::static_object::StaticObject;
 use cgmath::*;
 
 pub struct PointLight {
@@ -83,9 +83,9 @@ impl PointLight {
         }
     }
 
-    pub unsafe fn fill_depth_cubemap(&mut self, objects: &Vec<Object>) {
+    pub unsafe fn fill_depth_cubemap(&mut self, static_objects: &Vec<StaticObject>) {
         self.shader.set_used();
-        for obj in objects {
+        for obj in static_objects {
             self.shader.set_mat4("u_model", obj.transform);
             obj.material.draw();
         }

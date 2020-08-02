@@ -1,9 +1,9 @@
-use crate::object::Object;
 use crate::render::directional_light::*;
 use crate::render::point_light::*;
 use crate::render::shader::*;
 use crate::render::skybox::Skybox;
 use crate::render::*;
+use crate::static_object::StaticObject;
 use crate::*;
 use cgmath::*;
 
@@ -144,16 +144,16 @@ impl Renderer {
         }
     }
 
-    pub unsafe fn render(&mut self, objects: &Vec<Object>, player_v: Matrix4<f32>) {
+    pub unsafe fn render(&mut self, static_objects: &Vec<StaticObject>, player_v: Matrix4<f32>) {
         gl::Disable(gl::CULL_FACE);
-        self.directional_light.fill_depth_texture(&objects);
+        self.directional_light.fill_depth_texture(&static_objects);
 
         // Render to point-light cubemap array
         gl::Viewport(0, 0, render::SHADOWMAP_SIZE, render::SHADOWMAP_SIZE);
         gl::BindFramebuffer(gl::FRAMEBUFFER, self.point_light_fbo_handle);
         gl::Clear(gl::DEPTH_BUFFER_BIT);
         for point_light in &mut self.point_lights {
-            point_light.fill_depth_cubemap(&objects);
+            point_light.fill_depth_cubemap(&static_objects);
         }
         gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
 
@@ -174,7 +174,7 @@ impl Renderer {
         gl::ActiveTexture(gl::TEXTURE1);
         gl::BindTexture(gl::TEXTURE_CUBE_MAP_ARRAY, self.point_light_cubemap_handle);
 
-        for obj in objects {
+        for obj in static_objects {
             self.world_shader.set_mat4("u_model", obj.transform);
             obj.material.draw();
         }

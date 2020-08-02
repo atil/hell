@@ -1,6 +1,6 @@
-use crate::object::Object;
 use crate::render::shader::*;
 use crate::render::*;
+use crate::static_object::StaticObject;
 use cgmath::*;
 
 pub struct DirectionalLight {
@@ -66,12 +66,12 @@ impl DirectionalLight {
         }
     }
 
-    pub unsafe fn fill_depth_texture(&mut self, objects: &Vec<Object>) {
+    pub unsafe fn fill_depth_texture(&mut self, static_objects: &Vec<StaticObject>) {
         self.shader.set_used();
         gl::Viewport(0, 0, SHADOWMAP_SIZE, SHADOWMAP_SIZE);
         gl::BindFramebuffer(gl::FRAMEBUFFER, self.fbo);
         gl::Clear(gl::DEPTH_BUFFER_BIT);
-        for obj in objects {
+        for obj in static_objects {
             self.shader.set_mat4("u_model", obj.transform);
             obj.material.draw();
         }

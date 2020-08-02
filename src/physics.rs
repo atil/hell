@@ -1,5 +1,5 @@
 use crate::geom::*;
-use crate::object::Object;
+use crate::static_object::StaticObject;
 use cgmath::*;
 use std::cmp::Ordering;
 
@@ -62,12 +62,12 @@ impl std::fmt::Display for PlayerShape {
 }
 
 pub fn resolve_penetration(
-    collision_objects: &Vec<Object>,
+    static_static_objects: &Vec<StaticObject>,
     player_pos: Point3<f32>,
 ) -> Vector3<f32> {
     let mut player_shape = PlayerShape::new(player_pos, PLAYER_HEIGHT, PLAYER_CAPSULE_RADIUS);
     let mut total_displacement = Vector3::zero();
-    for obj in collision_objects {
+    for obj in static_static_objects {
         // TODO #PERF: We can do this multithreaded
         // Technically, there _is_ an order which _might_ change the outcome of the calculation
         // But we don't rely on that. We might as well send each triangle to a different thread
@@ -96,7 +96,7 @@ pub fn resolve_penetration(
 }
 
 pub fn grounded_check(
-    objects: &Vec<Object>,
+    static_objects: &Vec<StaticObject>,
     player_pos: Point3<f32>,
     player_move_dir_horz: Option<Vector3<f32>>,
 ) -> (bool, Vector3<f32>) {
@@ -125,7 +125,7 @@ pub fn grounded_check(
 
     let mut hit_triangle = false;
     let mut ground_normal = Vector3::zero();
-    'all: for obj in objects {
+    'all: for obj in static_objects {
         for tri in &obj.triangles {
             // TODO #PERF: No need to run this loop if the velocity is zero
             for ray_slot in &ray_origins {
