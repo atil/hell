@@ -5,6 +5,7 @@ use crate::render::material::Material;
 use crate::static_object::StaticObject;
 use cgmath::*;
 use serde::*;
+use std::fs;
 use std::path::Path;
 
 #[derive(Serialize, Deserialize)]
@@ -36,16 +37,9 @@ struct Scene {
     static_object_entries: Vec<StaticObjectEntry>,
 }
 
-pub fn load_prefabs() -> Vec<Prefab> {
-    // TODO: Give the json path here
-    let json_str = r#"
-        {
-            "prefab_entries": [{
-                "name": "world_prefab",
-                "asset_name": "assets/test_lighting.obj"
-            }]
-        }"#;
-
+pub fn load_prefabs(path: &str) -> Vec<Prefab> {
+    let json_string = fs::read_to_string(path).expect("Unable to read the prefabs file");
+    let json_str = json_string.as_str();
     let repository: Repository = serde_json::from_str(json_str).expect("Repository error");
     let mut prefabs = Vec::new();
     for prefab_entry in repository.prefab_entries {
@@ -61,15 +55,9 @@ pub fn load_prefabs() -> Vec<Prefab> {
     prefabs
 }
 
-pub fn create_static_objects(prefabs: &Vec<Prefab>) -> Vec<StaticObject> {
-    let json_str = r#"
-        {
-            "static_object_entries": [{
-                "name": "world_static_object",
-                "prefab_name": "world_prefab",
-                "position": [0.0, 0.0, 0.0]
-            }]
-        }"#;
+pub fn create_static_objects<'a>(path: &str, prefabs: &'a Vec<Prefab>) -> Vec<StaticObject<'a>> {
+    let json_string = fs::read_to_string(path).expect("Unable to read the scene file");
+    let json_str = json_string.as_str();
 
     let scene: Scene = serde_json::from_str(json_str).unwrap();
 

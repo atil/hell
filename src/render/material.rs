@@ -25,7 +25,7 @@ pub struct Material {
 
 impl Material {
     pub fn new(vertex_data: Vec<f32>, index_data: Vec<u32>, tobj_mat: tobj::Material) -> Material {
-        let (mat_type, shader_path) = get_material_type(&tobj_mat);
+        let (mat_type, _shader_path) = get_material_type(&tobj_mat);
 
         let mut vbo: GLuint = 0;
         let mut ibo: GLuint = 0;

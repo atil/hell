@@ -1,0 +1,6 @@
+{
+    "prefab_entries": [{
+        "name": "world_prefab",
+        "asset_name": "assets/test_lighting.obj"
+    }]
+}

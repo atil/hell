@@ -6,14 +6,8 @@ extern crate sdl2;
 extern crate serde;
 extern crate serde_json;
 
-use assets::*;
-use cgmath::*;
-use mesh::Mesh;
-use render::material::Material;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use serde::*;
-use serde_json::Result;
 
 mod assets;
 mod geom;
@@ -50,8 +44,8 @@ fn main() {
     let mut keys = keys::Keys::new();
     let mut player = player::Player::new();
 
-    let prefabs = assets::load_prefabs();
-    let static_objects = assets::create_static_objects(&prefabs);
+    let prefabs = assets::load_prefabs("assets/prefabs.json");
+    let static_objects = assets::create_static_objects("assets/scene.json", &prefabs);
 
     'main: loop {
         let (mut mouse_x, mut mouse_y) = (0.0, 0.0);

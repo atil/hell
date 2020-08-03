@@ -1,0 +1,7 @@
+{
+    "static_object_entries": [{
+        "name": "world_static_object",
+        "prefab_name": "world_prefab",
+        "position": [0.0, 0.0, 0.0]
+    }]
+}

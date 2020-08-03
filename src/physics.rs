@@ -62,12 +62,12 @@ impl std::fmt::Display for PlayerShape {
 }
 
 pub fn resolve_penetration(
-    static_static_objects: &Vec<StaticObject>,
+    static_objects: &Vec<StaticObject>,
     player_pos: Point3<f32>,
 ) -> Vector3<f32> {
     let mut player_shape = PlayerShape::new(player_pos, PLAYER_HEIGHT, PLAYER_CAPSULE_RADIUS);
     let mut total_displacement = Vector3::zero();
-    for obj in static_static_objects {
+    for obj in static_objects {
         // TODO #PERF: We can do this multithreaded
         // Technically, there _is_ an order which _might_ change the outcome of the calculation
         // But we don't rely on that. We might as well send each triangle to a different thread
